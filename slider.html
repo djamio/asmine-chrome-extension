@@ -1,0 +1,100 @@
+<div class="my-slider">
+  <div class="my-slider-content-container">
+    <div class="my-slider-menu">
+      <button class="my-slider-tab-btn active" data-tab="connect" title="Connect to WooCommerce">🔗</button>
+      <button class="my-slider-tab-btn" data-tab="ebay-config" title="eBay Setup">🇬🇧</button>
+      <button class="my-slider-tab-btn" data-tab="audit" title="Audit">📊</button>
+    </div>
+    <div class="my-slider-content">
+      <div id="tab-connect" class="my-slider-tab-content">
+        <h2>Connect to WooCommerce</h2>
+        <p>Enter your WooCommerce shop URL and connect:</p>
+        <input type="text" placeholder="https://yourshop.com" style="width:100%; padding:5px; margin-bottom:10px;" />
+        <button style="width:100%; padding:10px;">Connect</button>
+      </div>
+      <div id="tab-ebay-config" class="my-slider-tab-content">
+        <div class="ebay-config-container">
+          <h2>eBay Shop Configuration</h2>
+          
+          <div class="config-step">
+            <h3>Step 1: Register Your Application</h3>
+            <p>Click the button below to register your application with eBay:</p>
+            <button id="register-ebay-app" class="action-button">
+              Register on eBay Developer Portal
+            </button>
+          </div>
+
+          <div class="config-step">
+            <h3>Step 2: Authorize Your Application</h3>
+            <p>After registration, click below to authorize your application:</p>
+            <button id="authorize-ebay-app" class="action-button">
+              Authorize Application
+            </button>
+          </div>
+
+          <div class="config-status">
+            <h3>Configuration Status</h3>
+            <div class="status-item">
+              <span class="status-label">Production Cert ID:</span>
+              <span id="cert-id-status" class="status-value">Not configured</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Dev ID:</span>
+              <span id="dev-id-status" class="status-value">Not configured</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Authorization:</span>
+              <span id="auth-status" class="status-value">Not authorized</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="tab-audit" class="my-slider-tab-content active">
+        <h2>WooCommerce Audit</h2>
+        <p>Run a mock audit with clear UI and ChatGPT prompts:</p>
+        <button id="startAudit" style="width:100%; padding:10px;">Run Audit</button>
+        <div id="auditResults" style="margin-top:10px;"></div>
+      </div>
+      <div id="tab-products" class="my-slider-tab-content">
+        <h2>Products Management</h2>
+        <p>View, update and manage products from your WooCommerce store.</p>
+        <button style="width:100%; padding:10px;">View Products</button>
+      </div>
+      <div id="tab-coupons" class="my-slider-tab-content">
+        <h2>Coupons Management</h2>
+        <p>Create and manage discount coupons for your store.</p>
+        <button style="width:100%; padding:10px;">Manage Coupons</button>
+      </div>
+      <div id="tab-pro" class="my-slider-tab-content">
+        <h2>Pro Features</h2>
+        <p>Unlock advanced features and tools for WooCommerce.</p>
+        <button style="width:100%; padding:10px;">Upgrade to Pro</button>
+      </div>
+    </div>
+  </div>
+  <button class="my-slider-close" title="Close">X</button>
+</div>
+<button class="my-slider-toggle-btn">≡</button>
+
+<style>
+  #compareTabs {
+    margin-bottom: 10px;
+  }
+  #compareTabs .tab-btn {
+    margin-right: 5px;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    background: #eee;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  #compareTabs .tab-btn:hover {
+    background: #ddd;
+  }
+  .tab-content {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  </style>
+  

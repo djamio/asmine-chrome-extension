@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT WooCommerce Audit UI",
+  "version": "1.5",
+  "action": {
+    "default_title": "Open WooCommerce Audit"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "identity",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://auth.ebay.com/*",
+    "https://auth.sandbox.ebay.com/*",
+    "https://chatgpt.com/*",
+    "https://asmine-production.up.railway.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["slider.html", "styles.css", "reviewsStyles.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["styles.css", "reviewsStyles.css", "modal.css", "slider.css"],
+      "js": ["ebayConfig.js", "reviewsManager.js", "modal.js", "slider.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
+

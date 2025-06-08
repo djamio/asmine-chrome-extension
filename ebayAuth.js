@@ -11,9 +11,79 @@ class EbayAuth {
     this.authorize = this.authorize.bind(this);
     this.checkAuthStatus = this.checkAuthStatus.bind(this);
     this.updateUI = this.updateUI.bind(this);
+    this.resetAuth = this.resetAuth.bind(this);
 
     // Initialize
     this.init();
+    this.initializeResetButton();
+  }
+
+  initializeResetButton() {
+    const resetButton = document.getElementById('resetEbayAuth');
+    if (resetButton) {
+      resetButton.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to reset your eBay authorization? You will need to authorize again to use eBay features.')) {
+          await this.resetAuth();
+        }
+      });
+    }
+  }
+
+  async resetAuth() {
+    try {
+      console.log('Resetting eBay authorization...');
+      
+      // Show loading state
+      this.updateLoadingMessage('Resetting authorization...');
+      document.getElementById('authLoadingState').style.display = 'block';
+      
+      // Call backend to revoke token if needed
+      try {
+        const auth = await chrome.storage.local.get(['ebayAuth']);
+        if (auth.ebayAuth?.state) {
+          await fetch(`${this.API_URL}/ebay/revoke`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-ebay-state': auth.ebayAuth.state
+            },
+            mode: 'cors',
+            credentials: 'include'
+          });
+        }
+      } catch (error) {
+        console.error('Error revoking token:', error);
+        // Continue with reset even if revoke fails
+      }
+
+      // Clear stored auth data
+      await chrome.storage.local.remove(['ebayAuth']);
+      
+      // Update UI
+      setTimeout(() => {
+        document.getElementById('authLoadingState').style.display = 'none';
+        this.updateUI(false);
+        
+        // Show success message
+        const authInfo = document.querySelector('.auth-info');
+        if (authInfo) {
+          const originalContent = authInfo.innerHTML;
+          authInfo.innerHTML = '<p style="color: #4CAF50;">Authorization has been reset successfully. You can now authorize again.</p>';
+          setTimeout(() => {
+            authInfo.innerHTML = originalContent;
+          }, 3000);
+        }
+      }, 1000);
+
+      // Dispatch event for other components
+      document.dispatchEvent(new CustomEvent('ebayAuthChanged', {
+        detail: { authorized: false }
+      }));
+
+    } catch (error) {
+      console.error('Reset error:', error);
+      this.showError('Failed to reset authorization. Please try again.');
+    }
   }
 
   updateLoadingMessage(message, isError = false) {
@@ -34,10 +104,31 @@ class EbayAuth {
 
   async init() {
     console.log('Initializing EbayAuth');
-    // Check if already authorized
-    const auth = await chrome.storage.local.get(['ebayAuth']);
-    if (auth.ebayAuth?.isAuthorized) {
-      this.updateUI(true);
+    try {
+      // Check if we have stored auth data
+      const auth = await chrome.storage.local.get(['ebayAuth']);
+      console.log('Stored auth data:', auth);
+
+      if (auth.ebayAuth?.isAuthorized) {
+        // Check if the authorization is still valid
+        const expiresAt = new Date(auth.ebayAuth.expiresAt);
+        const now = new Date();
+        
+        if (expiresAt > now) {
+          console.log('Stored authorization is still valid');
+          this.updateUI(true);
+        } else {
+          console.log('Stored authorization has expired');
+          await chrome.storage.local.remove(['ebayAuth']);
+          this.updateUI(false);
+        }
+      } else {
+        console.log('No valid authorization found');
+        this.updateUI(false);
+      }
+    } catch (error) {
+      console.error('Init error:', error);
+      this.updateUI(false);
     }
   }
 
@@ -142,6 +233,7 @@ class EbayAuth {
       try {
         console.log(`Polling attempt ${attempts + 1}/${maxAttempts}`);
         const status = await this.checkAuthStatus(state);
+        console.log('Poll status:', status);
         
         if (status.error) {
           this.updateLoadingMessage(`Error: ${status.error}`, true);
@@ -152,14 +244,17 @@ class EbayAuth {
           return;
         }
 
-        if (status.authorized) {
+        // Check if authorization is successful
+        if (status.success && status.isAuthenticated && status.isValid) {
           this.updateLoadingMessage('Authorization successful! Completing setup...');
           
-          // Store auth status
+          // Store auth status with all relevant data
           await chrome.storage.local.set({ 
             ebayAuth: { 
               isAuthorized: true,
-              timestamp: Date.now() 
+              timestamp: Date.now(),
+              state: state,
+              expiresAt: status.expiresAt
             } 
           });
           
@@ -167,7 +262,7 @@ class EbayAuth {
           setTimeout(() => {
             this.hideLoadingState();
             this.updateUI(true);
-          }, 2000);
+          }, 1000);
           return;
         } else {
           this.updateLoadingMessage('Waiting for eBay authorization...');
@@ -187,15 +282,23 @@ class EbayAuth {
   async checkAuthStatus(state) {
     try {
       console.log(`Checking auth status for state: ${state}`);
-      const response = await fetch(`${this.API_URL}/ebay/auth-status?state=${state}`);
-      const data = await response.json();
+      const response = await fetch(`${this.API_URL}/ebay/auth-status?state=${state}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ebay-state': state
+        },
+        mode: 'cors',
+        credentials: 'include'
+      });
       
+      const data = await response.json();
       console.log('Auth status response:', data);
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to check authorization status');
       }
-      
+
       return data;
     } catch (error) {
       console.error('Status check error:', error);
@@ -206,7 +309,9 @@ class EbayAuth {
   updateUI(isAuthorized) {
     const statusText = document.getElementById('authStatusText');
     const authorizeButton = document.getElementById('authorizeEbay');
+    const resetButton = document.getElementById('resetEbayAuth');
     const loadingState = document.getElementById('authLoadingState');
+    const authInfo = document.querySelector('.auth-info');
     
     if (statusText) {
       statusText.textContent = isAuthorized ? 'Authorized' : 'Not Authorized';
@@ -217,9 +322,39 @@ class EbayAuth {
       authorizeButton.style.display = isAuthorized ? 'none' : 'block';
     }
 
+    if (resetButton) {
+      resetButton.style.display = isAuthorized ? 'block' : 'none';
+    }
+
     if (loadingState) {
       loadingState.style.display = 'none';
     }
+
+    if (authInfo) {
+      if (isAuthorized) {
+        chrome.storage.local.get(['ebayAuth'], (result) => {
+          const expiresAt = result.ebayAuth?.expiresAt;
+          const expiryDate = expiresAt ? new Date(expiresAt).toLocaleString() : 'Unknown';
+          authInfo.innerHTML = `
+            <p>Your eBay authorization is active.</p>
+            <p>Expires: ${expiryDate}</p>
+            <p class="auth-note" style="margin-top: 10px; font-size: 0.9em; color: #666;">
+              If you need to reauthorize or switch accounts, use the Reset Authorization button above.
+            </p>
+          `;
+        });
+      } else {
+        authInfo.innerHTML = `
+          <p>Click the button above to authorize this extension to access your eBay account. 
+          You will be redirected to eBay to complete the authorization process.</p>
+        `;
+      }
+    }
+
+    // Dispatch event for authorization status change
+    document.dispatchEvent(new CustomEvent('ebayAuthChanged', {
+      detail: { authorized: isAuthorized }
+    }));
   }
 
   showError(message) {

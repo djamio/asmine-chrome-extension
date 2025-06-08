@@ -185,23 +185,38 @@ Please analyze all aspects and return a JSON response with the following structu
   "priorityImprovements": string[]
 }`;
 
-        // Find the ChatGPT textarea
-        const textarea = document.querySelector('#prompt-textarea');
-        if (textarea) {
-          // Set the value and trigger input event
-          textarea.value = prompt;
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          
-          // Focus the textarea
-          textarea.focus();
-          
-          // Find and click the send button
-          const sendButton = document.querySelector('[data-testid="send-button"]');
-          if (sendButton) {
-            sendButton.click();
+        try {
+          // Find the contenteditable div (ChatGPT's input box)
+          const inputBox = document.querySelector('[contenteditable="true"]');
+          if (inputBox) {
+            // Focus the input box
+            inputBox.focus();
+
+            // Insert the prompt using execCommand
+            document.execCommand("insertText", false, prompt);
+
+            // Find and click the send button after a short delay
+            setTimeout(() => {
+              const sendButton = document.querySelector('[data-testid="send-button"]');
+              if (sendButton) {
+                sendButton.click();
+              }
+            }, 100);
+          }
+        } catch (error) {
+          console.error('Error inserting prompt:', error);
+          // Fallback: try the textarea approach
+          const textarea = document.querySelector('#prompt-textarea');
+          if (textarea) {
+            textarea.value = prompt;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.focus();
+            const sendButton = document.querySelector('[data-testid="send-button"]');
+            if (sendButton) {
+              sendButton.click();
+            }
           }
         }
-
         setTimeout(() => {
           btn.disabled = false;
           btn.textContent = 'Generate ChatGPT Prompt';

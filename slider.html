@@ -2,94 +2,62 @@
   <div class="my-slider-content-container">
     <div class="my-slider-menu">
       <button class="my-slider-tab-btn" data-tab="connect" title="Connect to WooCommerce">🔗</button>
-      <button class="my-slider-tab-btn" data-tab="ebay" title="eBay Authorization">🔑</button>
       <button class="my-slider-tab-btn active" data-tab="audit" title="Audit">📊</button>
     </div>
     <div class="my-slider-content">
       <div id="tab-connect" class="my-slider-tab-content" style="display: none;">
-        <h2>Connect to WooCommerce</h2>
-        <p>Enter your WooCommerce shop URL and connect:</p>
-        <input type="text" placeholder="https://yourshop.com" style="width:100%; padding:5px; margin-bottom:10px;" />
-        <button style="width:100%; padding:10px;">Connect</button>
-      </div>
-
-      <div id="tab-ebay" class="my-slider-tab-content" style="display: none;">
-        <div class="ebay-auth-container">
-          <h2>eBay Authorization</h2>
-          <div class="auth-status" id="ebayAuthStatus">
-            <p>Status: <span id="authStatusText">Not Authorized</span></p>
+        <div class="woo-auth-container">
+          <h2>Connect to WooCommerce</h2>
+          <div class="auth-status" id="wooAuthStatus">
+            <p>Status: <span id="authStatusText">Not Connected</span></p>
+          </div>
+          <div class="auth-form">
+            <div class="form-group">
+              <label for="shopUrl">Your WooCommerce Shop URL:</label>
+              <input type="url" id="shopUrl" class="form-input" 
+                     placeholder="https://your-shop.com" 
+                     pattern="https?://.+"
+                     title="Include http:// or https://" />
+              <p class="input-help">Enter your complete shop URL (e.g., https://your-shop.com)</p>
+            </div>
           </div>
           <div class="auth-actions">
-            <button id="authorizeEbay" class="action-button">
-              Authorize with eBay
+            <button id="authorizeWoo" class="action-button">
+              Connect to WooCommerce
             </button>
-            <button id="resetEbayAuth" class="action-button secondary" style="display: none; margin-top: 10px; background: #dc3545;">
-              Reset Authorization
+            <button id="resetWooAuth" class="action-button secondary" style="display: none; margin-top: 10px; background: #dc3545;">
+              Reset Connection
             </button>
             <div id="authLoadingState" class="loading-state" style="display: none;">
-              <div class="spinner"></div>
-              <p class="loading-text">Waiting for eBay authorization...</p>
-              <p class="loading-subtext">Please complete the authorization in the opened eBay window.</p>
-              <div class="progress-bar">
-                <div class="progress-fill"></div>
+              <div class="loading-content">
+                <div class="spinner"></div>
+                <p class="progress-text">Connecting to WooCommerce...</p>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill"></div>
+                </div>
+                <p class="time-remaining">30s remaining</p>
               </div>
-              <p class="time-remaining">Time remaining: <span id="timeRemaining">5:00</span></p>
             </div>
           </div>
           <div class="auth-info">
-            <p>Click the button above to authorize this extension to access your eBay account. You will be redirected to eBay to complete the authorization process.</p>
+            <p>Enter your WooCommerce shop URL and click connect. You'll be redirected to your shop to authorize access.</p>
           </div>
         </div>
       </div>
 
       <div id="tab-audit" class="my-slider-tab-content" style="display: block;">
-        <h2>WooCommerce Audit</h2>
-        <p>Run a mock audit with clear UI and ChatGPT prompts:</p>
-        <button id="startAudit" style="width:100%; padding:10px;">Run Audit</button>
-        <div id="auditResults" style="margin-top:10px;"></div>
-      </div>
-      <div id="tab-products" class="my-slider-tab-content">
-        <h2>Products Management</h2>
-        <p>View, update and manage products from your WooCommerce store.</p>
-        <button style="width:100%; padding:10px;">View Products</button>
-      </div>
-      <div id="tab-coupons" class="my-slider-tab-content">
-        <h2>Coupons Management</h2>
-        <p>Create and manage discount coupons for your store.</p>
-        <button style="width:100%; padding:10px;">Manage Coupons</button>
-      </div>
-      <div id="tab-pro" class="my-slider-tab-content">
-        <h2>Pro Features</h2>
-        <p>Unlock advanced features and tools for WooCommerce.</p>
-        <button style="width:100%; padding:10px;">Upgrade to Pro</button>
+        <h2>WooCommerce Products Audit</h2>
+        <div id="auditResults" style="margin-top:10px;">
+          <p>Connect to your WooCommerce store to view and audit products.</p>
+        </div>
       </div>
     </div>
   </div>
   <button class="my-slider-close" title="Close">X</button>
 </div>
-<button class="my-slider-toggle-btn">≡</button>
 
 <style>
-  #compareTabs {
-    margin-bottom: 10px;
-  }
-  #compareTabs .tab-btn {
-    margin-right: 5px;
-    padding: 6px 12px;
-    border: 1px solid #ccc;
-    background: #eee;
-    cursor: pointer;
-    border-radius: 4px;
-  }
-  #compareTabs .tab-btn:hover {
-    background: #ddd;
-  }
-  .tab-content {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  .ebay-auth-container {
+  .woo-auth-container {
     padding: 20px;
   }
 
@@ -100,12 +68,52 @@
     border-radius: 5px;
   }
 
+  .auth-form {
+    margin: 20px 0;
+  }
+
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #333;
+    font-weight: 500;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+  }
+
+  .form-input:focus {
+    border-color: #96588a;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(150, 88, 138, 0.1);
+  }
+
+  .form-input:invalid {
+    border-color: #dc3545;
+  }
+
+  .input-help {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+  }
+
   .auth-actions {
     margin: 20px 0;
   }
 
   .action-button {
-    background: #4CAF50;
+    background: #96588a;
     color: white;
     border: none;
     padding: 12px 24px;
@@ -116,7 +124,7 @@
   }
 
   .action-button:hover {
-    background: #45a049;
+    background: #874c7d;
   }
 
   .auth-info {
@@ -134,12 +142,17 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
 
+  .loading-content {
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
   .spinner {
     width: 40px;
     height: 40px;
     margin: 0 auto 15px;
     border: 4px solid #f3f3f3;
-    border-top: 4px solid #4CAF50;
+    border-top: 4px solid #96588a;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -149,17 +162,19 @@
     100% { transform: rotate(360deg); }
   }
 
-  .loading-text {
+  .progress-text {
     font-size: 16px;
     font-weight: 500;
     color: #333;
-    margin-bottom: 8px;
+    margin-bottom: 15px;
   }
 
-  .loading-subtext {
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 20px;
+  .progress-text.success {
+    color: #4CAF50;
+  }
+
+  .progress-text.error {
+    color: #dc3545;
   }
 
   .progress-bar {
@@ -171,16 +186,100 @@
     margin-bottom: 10px;
   }
 
-  .progress-fill {
+  .progress-bar-fill {
     width: 0%;
     height: 100%;
-    background: #4CAF50;
-    transition: width 1s linear;
+    background: #96588a;
+    transition: width 0.5s ease;
   }
 
   .time-remaining {
     font-size: 14px;
     color: #666;
+    margin-top: 10px;
+  }
+
+  .connection-details {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 20px;
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .product-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .product-header {
+    position: relative;
+  }
+
+  .product-info {
+    padding: 15px;
+  }
+
+  .product-info h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #333;
+  }
+
+  .product-meta {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+  }
+
+  .product-price {
+    font-size: 18px;
+    font-weight: bold;
+    color: #96588a;
+    margin-bottom: 8px;
+  }
+
+  .product-description {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+    line-height: 1.4;
+  }
+
+  .generate-prompt-btn {
+    background: #96588a;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .generate-prompt-btn:hover {
+    background: #874c7d;
+  }
+
+  .generate-prompt-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  .products-summary {
+    padding: 20px;
+    background: #f5f5f5;
+    margin-top: 20px;
+    border-radius: 8px;
   }
 </style>
   

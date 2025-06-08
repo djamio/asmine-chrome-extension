@@ -18,22 +18,22 @@
   // Function to fetch products from API
   async function fetchProducts(page = 1) {
     try {
-      // Check if authorized with eBay first
-      const auth = await chrome.storage.local.get(['ebayAuth']);
-      if (!auth.ebayAuth?.isAuthorized) {
+      // Check if authorized with WooCommerce first
+      const auth = await chrome.storage.local.get(['wooAuth']);
+      if (!auth.wooAuth?.isConnected) {
         auditResultsDiv.innerHTML = `
           <div style="text-align: center; padding: 20px;">
-            <p>Please authorize with eBay first to view products.</p>
-            <button id="goToEbayAuth" class="btn btn-primary">Go to eBay Authorization</button>
+            <p>Please connect to WooCommerce first to view products.</p>
+            <button id="goToWooAuth" class="btn btn-primary">Go to WooCommerce Connection</button>
           </div>
         `;
         
         // Add click handler for the auth button
-        document.getElementById('goToEbayAuth')?.addEventListener('click', () => {
-          // Switch to eBay auth tab
-          const ebayAuthTab = document.querySelector('[data-tab="ebay"]');
-          if (ebayAuthTab) {
-            ebayAuthTab.click();
+        document.getElementById('goToWooAuth')?.addEventListener('click', () => {
+          // Switch to WooCommerce auth tab
+          const wooAuthTab = document.querySelector('[data-tab="connect"]');
+          if (wooAuthTab) {
+            wooAuthTab.click();
           }
         });
         
@@ -45,19 +45,19 @@
         <div style="text-align: center; padding: 20px;">
           <div class="spinner" style="display: inline-block;">
             <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <circle class="spinner" cx="12" cy="12" r="10" fill="none" stroke="#10a37f" stroke-width="2"/>
+              <circle class="spinner" cx="12" cy="12" r="10" fill="none" stroke="#96588a" stroke-width="2"/>
             </svg>
           </div>
-          <p>Loading eBay products...</p>
+          <p>Loading WooCommerce products...</p>
         </div>
       `;
 
-      console.log('Making API call with state:', auth.ebayAuth.state);
-      const response = await fetch('https://asmine-production.up.railway.app/api/ebay/products', {
+      console.log('Making API call with state:', auth.wooAuth.state);
+      const response = await fetch('https://asmine-production.up.railway.app/api/woo/products', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'x-ebay-state': auth.ebayAuth.state
+          'x-woo-state': auth.wooAuth.state
         },
         mode: 'cors',
         credentials: 'include'
@@ -69,7 +69,7 @@
       }
 
       const data = await response.json();
-      console.log('eBay products response:', data);
+      console.log('WooCommerce products response:', data);
       
       if (!data.success) {
         throw new Error(data.error || 'API response indicates failure');
@@ -82,18 +82,18 @@
         itemsPerPage: data.products?.length || 0
       };
     } catch (error) {
-      console.error('Error fetching eBay products:', error);
+      console.error('Error fetching WooCommerce products:', error);
       if (auditResultsDiv) {
         auditResultsDiv.innerHTML = `
           <div style="color: red; padding: 20px; text-align: center;">
-            <h3>Error Loading eBay Products</h3>
+            <h3>Error Loading WooCommerce Products</h3>
             <p>${error.message}</p>
-            <button id="retryEbayProducts" class="btn btn-secondary">Retry</button>
+            <button id="retryWooProducts" class="btn btn-secondary">Retry</button>
           </div>
         `;
         
         // Add retry handler
-        document.getElementById('retryEbayProducts')?.addEventListener('click', () => {
+        document.getElementById('retryWooProducts')?.addEventListener('click', () => {
           renderPage();
         });
       }
@@ -122,7 +122,7 @@
             </div>
             <div class="product-info">
               <h3>${p.title}</h3>
-              <p class="product-meta">SKU: ${p.sku || 'N/A'} | Quantity: ${p.quantity || 0}</p>
+              <p class="product-meta">SKU: ${p.sku || 'N/A'} | Stock: ${p.stock_quantity || 0}</p>
               <p class="product-price">${p.price || '$0.00'}</p>
               <p class="product-description">${p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
               <button class="generate-prompt-btn">Generate ChatGPT Prompt</button>
@@ -145,13 +145,13 @@
         btn.textContent = 'Generating...';
 
         const prompt = `
-Audit the following eBay product and provide a comprehensive analysis:
+Audit the following WooCommerce product and provide a comprehensive analysis:
 
 Product Details:
 - Title: ${p.title}
 - Description: ${p.description}
 - Price: ${p.price}
-- Quantity: ${p.quantity}
+- Stock: ${p.stock_quantity}
 - SKU: ${p.sku || 'N/A'}
 
 Please analyze all aspects and return a JSON response with the following structure:
@@ -203,22 +203,32 @@ Please analyze all aspects and return a JSON response with the following structu
         cssLink.href = chrome.runtime.getURL('styles.css');
         document.head.appendChild(cssLink);
 
-        // Add slider toggle functionality
+        // Get slider elements
         const toggleBtn = document.querySelector('.my-slider-toggle-btn');
         const slider = document.querySelector('.my-slider');
         console.log('Toggle button found:', !!toggleBtn);
         console.log('Slider found:', !!slider);
 
+        // Hide toggle button and open slider by default
+        if (toggleBtn) toggleBtn.style.display = 'none';
+        if (slider) {
+          slider.classList.add('open');
+          document.body.classList.add('slider-open');
+        }
+
+        /* Commented out toggle button functionality
         toggleBtn.addEventListener('click', () => {
           slider.classList.add('open');
           document.body.classList.add('slider-open');
           toggleBtn.style.display = 'none';
         });
+        */
 
+        // Keep close button functionality
         slider.querySelector('.my-slider-close').addEventListener('click', () => {
           slider.classList.remove('open');
           document.body.classList.remove('slider-open');
-          toggleBtn.style.display = 'block';
+          // Commented out: toggleBtn.style.display = 'block';
         });
 
         // Add tab switching functionality
@@ -245,35 +255,27 @@ Please analyze all aspects and return a JSON response with the following structu
           });
         });
 
-        // Initialize eBay authorization
-        console.log('Initializing eBay authorization...');
-        if (typeof window.EbayAuth === 'undefined') {
-          console.error('EbayAuth is not loaded. Make sure ebayAuth.js is loaded before slider.js');
-          return;
-        }
-
-        const ebayAuth = new window.EbayAuth();
-        const authorizeButton = document.getElementById('authorizeEbay');
-        console.log('Authorize button found:', !!authorizeButton);
-
+        // Initialize auditResultsDiv
+        auditResultsDiv = document.getElementById('auditResults');
+        
+        // Create and initialize WooAuth
+        const authorizeButton = document.getElementById('authorizeWoo');
         if (authorizeButton) {
           console.log('Adding click listener to authorize button');
-          authorizeButton.onclick = (e) => {
+          authorizeButton.addEventListener('click', (e) => {
             e.preventDefault();
             console.log('Authorize button clicked');
-            ebayAuth.authorize();
-          };
-        } else {
-          console.error('Authorize button not found in DOM');
+            window.wooAuth?.authorize();
+          });
         }
 
-        // Initialize the audit results div
-        auditResultsDiv = container.querySelector('#auditResults');
-        console.log('Audit results div found:', !!auditResultsDiv);
-        renderPage();
+        // Listen for auth changes
+        document.addEventListener('wooAuthChanged', (event) => {
+          if (event.detail.connected) {
+            renderPage();
+          }
+        });
       })
-      .catch(error => {
-        console.error('Error injecting slider:', error);
-      });
+      .catch(error => console.error('Error injecting slider:', error));
   }
 })();

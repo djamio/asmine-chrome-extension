@@ -13,8 +13,6 @@
     "clipboardWrite"
   ],
   "host_permissions": [
-    "https://auth.ebay.com/*",
-    "https://auth.sandbox.ebay.com/*",
     "https://chatgpt.com/*",
     "https://asmine-production.up.railway.app/*"
   ],
@@ -23,7 +21,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["slider.html", "styles.css", "reviewsStyles.css"],
+      "resources": ["slider.html", "styles.css", "reviewsStyles.css", "return.html"],
       "matches": ["<all_urls>"]
     }
   ],
@@ -32,7 +30,7 @@
     {
       "matches": ["<all_urls>"],
       "css": ["styles.css", "reviewsStyles.css", "modal.css", "slider.css"],
-      "js": ["ebayAuth.js", "reviewsManager.js", "modal.js", "slider.js"],
+      "js": ["wooAuth.js", "reviewsManager.js", "modal.js", "slider.js"],
       "run_at": "document_idle"
     }
   ]

@@ -1,55 +1,45 @@
 <div class="my-slider">
   <div class="my-slider-content-container">
     <div class="my-slider-menu">
-      <button class="my-slider-tab-btn active" data-tab="connect" title="Connect to WooCommerce">🔗</button>
-      <button class="my-slider-tab-btn" data-tab="ebay-config" title="eBay Setup">🇬🇧</button>
-      <button class="my-slider-tab-btn" data-tab="audit" title="Audit">📊</button>
+      <button class="my-slider-tab-btn" data-tab="connect" title="Connect to WooCommerce">🔗</button>
+      <button class="my-slider-tab-btn" data-tab="ebay" title="eBay Authorization">🔑</button>
+      <button class="my-slider-tab-btn active" data-tab="audit" title="Audit">📊</button>
     </div>
     <div class="my-slider-content">
-      <div id="tab-connect" class="my-slider-tab-content">
+      <div id="tab-connect" class="my-slider-tab-content" style="display: none;">
         <h2>Connect to WooCommerce</h2>
         <p>Enter your WooCommerce shop URL and connect:</p>
         <input type="text" placeholder="https://yourshop.com" style="width:100%; padding:5px; margin-bottom:10px;" />
         <button style="width:100%; padding:10px;">Connect</button>
       </div>
-      <div id="tab-ebay-config" class="my-slider-tab-content">
-        <div class="ebay-config-container">
-          <h2>eBay Shop Configuration</h2>
-          
-          <div class="config-step">
-            <h3>Step 1: Register Your Application</h3>
-            <p>Click the button below to register your application with eBay:</p>
-            <button id="register-ebay-app" class="action-button">
-              Register on eBay Developer Portal
-            </button>
-          </div>
 
-          <div class="config-step">
-            <h3>Step 2: Authorize Your Application</h3>
-            <p>After registration, click below to authorize your application:</p>
-            <button id="authorize-ebay-app" class="action-button">
-              Authorize Application
-            </button>
+      <div id="tab-ebay" class="my-slider-tab-content" style="display: none;">
+        <div class="ebay-auth-container">
+          <h2>eBay Authorization</h2>
+          <div class="auth-status" id="ebayAuthStatus">
+            <p>Status: <span id="authStatusText">Not Authorized</span></p>
           </div>
-
-          <div class="config-status">
-            <h3>Configuration Status</h3>
-            <div class="status-item">
-              <span class="status-label">Production Cert ID:</span>
-              <span id="cert-id-status" class="status-value">Not configured</span>
+          <div class="auth-actions">
+            <button id="authorizeEbay" class="action-button">
+              Authorize with eBay
+            </button>
+            <div id="authLoadingState" class="loading-state" style="display: none;">
+              <div class="spinner"></div>
+              <p class="loading-text">Waiting for eBay authorization...</p>
+              <p class="loading-subtext">Please complete the authorization in the opened eBay window.</p>
+              <div class="progress-bar">
+                <div class="progress-fill"></div>
+              </div>
+              <p class="time-remaining">Time remaining: <span id="timeRemaining">5:00</span></p>
             </div>
-            <div class="status-item">
-              <span class="status-label">Dev ID:</span>
-              <span id="dev-id-status" class="status-value">Not configured</span>
-            </div>
-            <div class="status-item">
-              <span class="status-label">Authorization:</span>
-              <span id="auth-status" class="status-value">Not authorized</span>
-            </div>
+          </div>
+          <div class="auth-info">
+            <p>Click the button above to authorize this extension to access your eBay account. You will be redirected to eBay to complete the authorization process.</p>
           </div>
         </div>
       </div>
-      <div id="tab-audit" class="my-slider-tab-content active">
+
+      <div id="tab-audit" class="my-slider-tab-content" style="display: block;">
         <h2>WooCommerce Audit</h2>
         <p>Run a mock audit with clear UI and ChatGPT prompts:</p>
         <button id="startAudit" style="width:100%; padding:10px;">Run Audit</button>
@@ -96,5 +86,98 @@
     border: 1px solid #ccc;
     border-radius: 4px;
   }
-  </style>
+  .ebay-auth-container {
+    padding: 20px;
+  }
+
+  .auth-status {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 5px;
+  }
+
+  .auth-actions {
+    margin: 20px 0;
+  }
+
+  .action-button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+  }
+
+  .action-button:hover {
+    background: #45a049;
+  }
+
+  .auth-info {
+    margin-top: 20px;
+    color: #666;
+    font-size: 14px;
+  }
+
+  .loading-state {
+    margin-top: 20px;
+    text-align: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 15px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .loading-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+  }
+
+  .loading-subtext {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .progress-fill {
+    width: 0%;
+    height: 100%;
+    background: #4CAF50;
+    transition: width 1s linear;
+  }
+
+  .time-remaining {
+    font-size: 14px;
+    color: #666;
+  }
+</style>
   

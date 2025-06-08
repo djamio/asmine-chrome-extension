@@ -296,12 +296,15 @@ Please analyze all aspects and return a JSON response with the following structu
   }
 
   function injectSlider() {
+    console.log('Starting slider injection...');
     fetch(chrome.runtime.getURL('slider.html'))
       .then(response => response.text())
       .then(html => {
+        console.log('Slider HTML fetched');
         const container = document.createElement('div');
         container.innerHTML = html;
         document.body.appendChild(container);
+        console.log('Slider container added to DOM');
 
         // Add link to external CSS file
         const cssLink = document.createElement('link');
@@ -312,6 +315,8 @@ Please analyze all aspects and return a JSON response with the following structu
         // Add slider toggle functionality
         const toggleBtn = document.querySelector('.my-slider-toggle-btn');
         const slider = document.querySelector('.my-slider');
+        console.log('Toggle button found:', !!toggleBtn);
+        console.log('Slider found:', !!slider);
 
         toggleBtn.addEventListener('click', () => {
           slider.classList.add('open');
@@ -328,10 +333,13 @@ Please analyze all aspects and return a JSON response with the following structu
         // Add tab switching functionality
         const tabButtons = document.querySelectorAll('.my-slider-tab-btn');
         const tabContents = document.querySelectorAll('.my-slider-tab-content');
+        console.log('Number of tab buttons found:', tabButtons.length);
+        console.log('Number of tab contents found:', tabContents.length);
 
         tabButtons.forEach(btn => {
           btn.addEventListener('click', () => {
             const target = btn.getAttribute('data-tab');
+            console.log('Tab clicked:', target);
             
             // Update active state of buttons
             tabButtons.forEach(b => b.classList.remove('active'));
@@ -346,9 +354,35 @@ Please analyze all aspects and return a JSON response with the following structu
           });
         });
 
+        // Initialize eBay authorization
+        console.log('Initializing eBay authorization...');
+        if (typeof window.EbayAuth === 'undefined') {
+          console.error('EbayAuth is not loaded. Make sure ebayAuth.js is loaded before slider.js');
+          return;
+        }
+
+        const ebayAuth = new window.EbayAuth();
+        const authorizeButton = document.getElementById('authorizeEbay');
+        console.log('Authorize button found:', !!authorizeButton);
+
+        if (authorizeButton) {
+          console.log('Adding click listener to authorize button');
+          authorizeButton.onclick = (e) => {
+            e.preventDefault();
+            console.log('Authorize button clicked');
+            ebayAuth.authorize();
+          };
+        } else {
+          console.error('Authorize button not found in DOM');
+        }
+
         // Initialize the audit results div
         auditResultsDiv = container.querySelector('#auditResults');
+        console.log('Audit results div found:', !!auditResultsDiv);
         renderPage();
+      })
+      .catch(error => {
+        console.error('Error injecting slider:', error);
       });
   }
 })();

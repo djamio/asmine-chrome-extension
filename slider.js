@@ -20,7 +20,7 @@
     try {
       // Check if authorized with WooCommerce first
       const auth = await chrome.storage.local.get(['wooAuth']);
-      if (!auth.wooAuth?.isConnected) {
+      if (!auth.wooAuth?.isConnected || !auth.wooAuth?.userId) {
         auditResultsDiv.innerHTML = `
           <div style="text-align: center; padding: 20px;">
             <p>Please connect to WooCommerce first to view products.</p>
@@ -52,15 +52,12 @@
         </div>
       `;
 
-      console.log('Making API call with state:', auth.wooAuth.state);
       const response = await fetch('https://asmine-production.up.railway.app/api/woo/products', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'x-woo-state': auth.wooAuth.state
-        },
-        mode: 'cors',
-        credentials: 'include'
+          'x-woo-user-id': auth.wooAuth.userId
+        }
       });
 
       if (!response.ok) {

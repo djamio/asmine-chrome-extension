@@ -103,11 +103,20 @@ class WooAuth {
 
   async authorize() {
     try {
+      // Check if authorization is already in progress
+      if (this._authInProgress) {
+        console.log('Authorization already in progress');
+        return;
+      }
+
       const shopUrl = document.getElementById('shopUrl')?.value.trim();
       if (!shopUrl || !this.validateUrl(shopUrl)) {
         this.showError('Please enter a valid shop URL');
         return;
       }
+
+      // Set authorization in progress flag
+      this._authInProgress = true;
 
       this.showLoadingState();
       this.updateLoadingMessage('Initiating connection...', 'info');
@@ -139,6 +148,11 @@ class WooAuth {
       console.error('Authorization error:', error);
       this.hideLoadingState();
       this.showError(error.message || 'Failed to connect to WooCommerce. Please try again.');
+    } finally {
+      // Clear authorization in progress flag after a delay
+      setTimeout(() => {
+        this._authInProgress = false;
+      }, 1000);
     }
   }
 
@@ -298,7 +312,6 @@ class WooAuth {
     const resetButton = document.getElementById('resetWooAuth');
     const authForm = document.querySelector('.auth-form');
     const authInfo = document.querySelector('.auth-info');
-    const connectionDetails = document.querySelector('.connection-details');
     const shopUrlInput = document.getElementById('shopUrl');
 
     if (statusText) {
@@ -324,24 +337,7 @@ class WooAuth {
           <div class="connection-details">
             <p style="color: #4CAF50; margin-bottom: 10px;">✓ Successfully connected to your WooCommerce store</p>
             <p style="color: #666; font-size: 14px;">Connected to: ${shopUrl}</p>
-            <button id="resetConnection" class="action-button secondary" style="
-              background: #dc3545;
-              margin-top: 15px;
-              font-size: 14px;
-              padding: 8px 16px;">
-              Reset Connection
-            </button>
           </div>`;
-
-        // Add reset connection handler
-        const resetBtn = authInfo.querySelector('#resetConnection');
-        if (resetBtn) {
-          resetBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to reset the connection? This will require you to reconnect to your store.')) {
-              this.resetAuth();
-            }
-          });
-        }
       } else {
         authInfo.innerHTML = '<p>Enter your WooCommerce shop URL and click connect. You\'ll be redirected to your shop to authorize access.</p>';
       }

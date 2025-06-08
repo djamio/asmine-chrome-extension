@@ -52,7 +52,7 @@
         </div>
       `;
 
-      const response = await fetch('https://asmine-production.up.railway.app/api/woo/products', {
+      const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products?page=${page}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -72,11 +72,12 @@
         throw new Error(data.error || 'API response indicates failure');
       }
 
+      // Return pagination data along with products
       return {
         products: data.products || [],
-        totalProducts: data.products?.length || 0,
-        totalPages: 1,
-        itemsPerPage: data.products?.length || 0
+        totalProducts: data.totalProducts || data.products?.length || 0,
+        totalPages: data.totalPages || Math.ceil((data.totalProducts || data.products?.length) / 10),
+        itemsPerPage: data.itemsPerPage || 10
       };
     } catch (error) {
       console.error('Error fetching WooCommerce products:', error);
@@ -104,7 +105,7 @@
     const data = await fetchProducts(currentPage);
     if (!data) return;
 
-    const { products, totalProducts } = data;
+    const { products, totalProducts, totalPages } = data;
 
     // Create product cards
     auditResultsDiv.innerHTML = `
@@ -122,6 +123,14 @@
               <p class="product-meta">SKU: ${p.sku || 'N/A'} | Stock: ${p.stock_quantity || 0}</p>
               <p class="product-price">${p.price || '$0.00'}</p>
               <p class="product-description">${p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
+              <div class="product-tags">
+                ${(p.categories || []).map(cat => `
+                  <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
+                `).join('')}
+                ${(p.tags || []).map(tag => `
+                  <span class="tag">${typeof tag === 'object' ? tag.name : tag}</span>
+                `).join('')}
+              </div>
               <button class="generate-prompt-btn">Generate ChatGPT Prompt</button>
               <div class="audit-results"></div>
             </div>
@@ -131,12 +140,22 @@
       <div class="products-summary">
         <p>Total Products: ${totalProducts}</p>
       </div>
+      <div class="pagination">
+        <button id="firstPage" ${currentPage === 1 ? 'disabled' : ''}>⟪ First</button>
+        <button id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>⟨ Previous</button>
+        <span class="page-info">
+          Page ${currentPage} of ${totalPages}
+          (${(currentPage - 1) * data.itemsPerPage + 1}-${Math.min(currentPage * data.itemsPerPage, totalProducts)} of ${totalProducts} products)
+        </span>
+        <button id="nextPage" ${currentPage >= totalPages ? 'disabled' : ''}>Next ⟩</button>
+        <button id="lastPage" ${currentPage >= totalPages ? 'disabled' : ''}>Last ⟫</button>
+      </div>
     `;
 
     // Add event listeners for generate prompt buttons
     const buttons = auditResultsDiv.querySelectorAll('.generate-prompt-btn');
     buttons.forEach((btn, i) => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
         const p = products[i];
         btn.disabled = true;
         btn.textContent = 'Generating...';
@@ -166,20 +185,57 @@ Please analyze all aspects and return a JSON response with the following structu
   "priorityImprovements": string[]
 }`;
 
-        const textarea = document.querySelector('textarea');
+        // Find the ChatGPT textarea
+        const textarea = document.querySelector('#prompt-textarea');
         if (textarea) {
-          try {
-            textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-          } catch (error) {
-            console.error('Error sending prompt:', error);
-          } finally {
-            btn.disabled = false;
-            btn.textContent = 'Generate ChatGPT Prompt';
+          // Set the value and trigger input event
+          textarea.value = prompt;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          
+          // Focus the textarea
+          textarea.focus();
+          
+          // Find and click the send button
+          const sendButton = document.querySelector('[data-testid="send-button"]');
+          if (sendButton) {
+            sendButton.click();
           }
         }
+
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Generate ChatGPT Prompt';
+        }, 1000);
       });
+    });
+
+    // Add pagination event listeners
+    document.getElementById('firstPage')?.addEventListener('click', () => {
+      if (currentPage !== 1) {
+        currentPage = 1;
+        renderPage();
+      }
+    });
+
+    document.getElementById('prevPage')?.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderPage();
+      }
+    });
+
+    document.getElementById('nextPage')?.addEventListener('click', () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderPage();
+      }
+    });
+
+    document.getElementById('lastPage')?.addEventListener('click', () => {
+      if (currentPage !== totalPages) {
+        currentPage = totalPages;
+        renderPage();
+      }
     });
   }
 

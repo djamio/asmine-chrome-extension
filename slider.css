@@ -226,3 +226,30 @@ body.slider-open .my-slider-toggle-btn {
 .action-button.secondary:hover {
   background: #c82333;
 }
+
+.product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.category-tag, .tag {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.category-tag {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.tag {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}

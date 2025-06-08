@@ -217,3 +217,12 @@ body.slider-open .my-slider-toggle-btn {
     max-width: 100% !important;
   }
 }
+
+.action-button.secondary {
+  background: #dc3545;
+  transition: background-color 0.3s;
+}
+
+.action-button.secondary:hover {
+  background: #c82333;
+}

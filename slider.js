@@ -406,12 +406,12 @@ Product Details:
 - Title: ${product.title}
 - Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
 - Full Description: ${product.description}
-- Specifications: ${JSON.stringify(product.attributes || [])}
+- Specifications: ${JSON.stringify(product.specifications || [])}
 - Categories: ${JSON.stringify(product.categories || [])}
 - Tags: ${JSON.stringify(product.tags || [])}
 - Reviews Count: ${product.reviews_count || 0}
 
-Please analyze all aspects and return a JSON response with the following structure:
+Please analyze all aspects and return a JSON response with the following structure: make sure you return the response in the same language as the product.
 {
   "titleScore": number (0-100),
   "titleAnalysis": string,
@@ -431,11 +431,13 @@ Please analyze all aspects and return a JSON response with the following structu
   "tagsScore": number (0-100),
   "tagsAnalysis": string,
   "suggestedTags": string[],
-  "globalScore": number (0-100),
-  "overallAnalysis": string,
-  "priorityImprovements": string[]
+  "suggested 2 reviews including the title, the rating, the review, and the date": string[],
+  
 }`;
 
+// "globalScore": number (0-100),
+//   "overallAnalysis": string,
+//   "priorityImprovements": string[]
     try {
       // Find the contenteditable div (ChatGPT's input box)
       const inputBox = document.querySelector('[contenteditable="true"]');
@@ -703,7 +705,7 @@ Please analyze all aspects and return a JSON response with the following structu
     }
 
     // Update short description tab
-    const shortDescTab = modal.querySelector('#tab-short-description');
+    const shortDescTab = modal.querySelector('#tab-short-desc');
     if (shortDescTab) {
       shortDescTab.innerHTML = createComparisonBlock(
         product.shortDescription || 'No short description',
@@ -730,7 +732,7 @@ Please analyze all aspects and return a JSON response with the following structu
     const specsTab = modal.querySelector('#tab-specifications');
     if (specsTab) {
       specsTab.innerHTML = createComparisonBlock(
-        formatSpecifications(product.attributes),
+        formatSpecifications(product.specifications),
         (auditResults.suggestedSpecs || []).map(spec => `<div class="specification-item">${spec}</div>`).join(''),
         auditResults.specificationsScore,
         auditResults.specificationsAnalysis,

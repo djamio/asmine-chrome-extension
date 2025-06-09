@@ -511,36 +511,97 @@
 }
 
 .review-item {
-  background: #f8fafc;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 16px;
-  margin-bottom: 16px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.review-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 12px;
 }
 
 .review-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-author {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.review-date {
+  color: #718096;
+  font-size: 0.9em;
 }
 
 .review-rating {
-  color: #ffc107;
-  font-size: 1.1em;
-  margin-top: 4px;
+  color: #ecc94b;
+  letter-spacing: 2px;
 }
 
 .review-content {
-  color: #334155;
-  line-height: 1.6;
-  margin-bottom: 16px;
+  color: #4a5568;
+  line-height: 1.5;
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+
+/* Make reviews editable in suggested version */
+.suggested .review-content {
+  border: 1px solid transparent;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.suggested .review-content:hover {
+  border-color: #e2e8f0;
+  background: #f7fafc;
+}
+
+.suggested .review-content:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #fff;
+}
+
+/* Review editing controls */
+.review-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.review-edit-btn,
+.review-save-btn {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #4a5568;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s ease;
+}
+
+.review-edit-btn:hover,
+.review-save-btn:hover {
+  background: #f7fafc;
+  border-color: #cbd5e0;
+}
+
+.review-save-btn {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.review-save-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
 .review-actions {

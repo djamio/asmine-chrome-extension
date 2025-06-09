@@ -20,6 +20,7 @@ function createAuditModal() {
           <button class="tab-btn" data-tab="specifications">Specifications</button>
           <button class="tab-btn" data-tab="categories">Categories</button>
           <button class="tab-btn" data-tab="tags">Tags</button>
+          <button class="tab-btn" data-tab="reviews">Reviews</button>
           <button class="tab-btn" data-tab="analysis">Global Analysis</button>
         </div>
         <div class="tab-content">
@@ -107,6 +108,21 @@ function createAuditModal() {
               </div>
               <div class="suggested">
                 <h4>Suggested Tags</h4>
+                <div class="content suggested-content"></div>
+                <div class="score"></div>
+                <div class="analysis"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-reviews" class="tab-pane">
+            <h3>Reviews Analysis</h3>
+            <div class="comparison">
+              <div class="original">
+                <h4>Current Reviews</h4>
+                <div class="content original-content"></div>
+              </div>
+              <div class="suggested">
+                <h4>Suggested Reviews</h4>
                 <div class="content suggested-content"></div>
                 <div class="score"></div>
                 <div class="analysis"></div>
@@ -247,59 +263,72 @@ function createAuditModal() {
       margin-bottom: 20px;
     }
 
-    .improvements-list li {
-      margin-bottom: 10px;
-      padding-left: 20px;
-      position: relative;
+    /* Reviews specific styles */
+    .review-item {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
     }
 
-    .improvements-list li:before {
-      content: "•";
-      position: absolute;
-      left: 0;
-      color: #96588a;
+    .review-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .review-author {
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .review-date {
+      color: #718096;
+      font-size: 0.9em;
+    }
+
+    .review-rating {
+      color: #ecc94b;
+      letter-spacing: 2px;
+    }
+
+    .review-content {
+      color: #4a5568;
+      line-height: 1.5;
+      margin-top: 8px;
+      white-space: pre-wrap;
     }
   `;
 
-  // Add to page
-  document.body.appendChild(styles);
+  document.head.appendChild(styles);
   document.body.appendChild(modal);
 
   // Add tab switching functionality
   const tabButtons = modal.querySelectorAll('.tab-btn');
   const tabPanes = modal.querySelectorAll('.tab-pane');
 
-  tabButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = btn.dataset.tab;
-      
-      // Update active state of buttons
-      tabButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      
-      // Update active state of panes
-      tabPanes.forEach(pane => {
-        if (pane.id === `tab-${target}`) {
-          pane.classList.add('active');
-        } else {
-          pane.classList.remove('active');
-        }
-      });
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      // Remove active class from all buttons and panes
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabPanes.forEach(pane => pane.classList.remove('active'));
+
+      // Add active class to clicked button and corresponding pane
+      button.classList.add('active');
+      const tabId = `tab-${button.dataset.tab}`;
+      modal.querySelector(`#${tabId}`).classList.add('active');
     });
   });
 
-  // Add close functionality
-  const closeBtn = modal.querySelector('.close');
-  closeBtn.onclick = () => {
+  // Add close button functionality
+  const closeButton = modal.querySelector('.close');
+  closeButton.addEventListener('click', () => {
     modal.querySelector('.audit-modal').style.display = 'none';
-  };
-
-  // Close on outside click
-  modal.querySelector('.audit-modal').onclick = (event) => {
-    if (event.target === modal.querySelector('.audit-modal')) {
-      modal.querySelector('.audit-modal').style.display = 'none';
-    }
-  };
+  });
 
   return modal;
 }

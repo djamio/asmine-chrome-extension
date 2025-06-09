@@ -412,6 +412,7 @@ Product Details:
 - Reviews Count: ${product.reviews_count || 0}
 
 Please analyze all aspects and return a JSON response with the following structure: make sure you return the response in the same language as the product.
+generate two reviews, and no nested categories or tags.
 {
   "titleScore": number (0-100),
   "titleAnalysis": string,
@@ -431,9 +432,17 @@ Please analyze all aspects and return a JSON response with the following structu
   "tagsScore": number (0-100),
   "tagsAnalysis": string,
   "suggestedTags": string[],
-  "suggested reviews": string[],
-  "reviews score": number (0-100),
-  "reviews analysis": string
+  "suggestedReviews": [
+    {
+      "review": string,
+      "rating": number (1-5),
+      "date": string (ISO format: YYYY-MM-DD),
+      "author": string
+    }
+  ],
+  "reviewsScore": number (0-100),
+  "reviewsAnalysis": string
+
   
 }`;
 
@@ -715,6 +724,65 @@ Please analyze all aspects and return a JSON response with the following structu
       }).join('\n');
     }
 
+    // Helper function to format reviews
+    function formatReviews(reviews) {
+      console.log('Formatting reviews input:', reviews);
+      
+      if (!Array.isArray(reviews) || reviews.length === 0) {
+        console.log('No reviews to format');
+        return 'No reviews';
+      }
+      
+      return reviews.map(review => {
+        console.log('Processing review:', review);
+        return `
+          <div class="review-item">
+            <div class="review-header">
+              <span class="review-author">${review.author || review.reviewer || 'Anonymous'}</span>
+              <span class="review-date">${review.date}</span>
+              <div class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
+            </div>
+            <div class="review-content">${review.review}</div>
+          </div>
+        `;
+      }).join('\n');
+    }
+
+    // Function to parse reviews from HTML content
+    function parseReviewsFromHTML(content) {
+      console.log('Parsing reviews from HTML:', content);
+      
+      if (!content || content === 'No reviews') {
+        console.log('No reviews to parse');
+        return [];
+      }
+
+      const reviewElements = content.match(/<div class="review-item">([\s\S]*?)<\/div>/g) || [];
+      console.log('Found review elements:', reviewElements);
+
+      const reviews = reviewElements.map(element => {
+        const authorMatch = element.match(/<span class="review-author">(.*?)<\/span>/);
+        const dateMatch = element.match(/<span class="review-date">(.*?)<\/span>/);
+        const ratingMatch = element.match(/<div class="review-rating">(.*?)<\/div>/);
+        const contentMatch = element.match(/<div class="review-content">(.*?)<\/div>/);
+
+        const rating = ratingMatch ? (ratingMatch[1].match(/★/g) || []).length : 0;
+
+        const review = {
+          author: authorMatch ? authorMatch[1] : 'Anonymous',
+          date: dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0],
+          rating: rating,
+          review: contentMatch ? contentMatch[1].trim() : ''
+        };
+
+        console.log('Parsed review:', review);
+        return review;
+      });
+
+      console.log('Final parsed reviews:', reviews);
+      return reviews;
+    }
+
     // Update title tab
     const titleTab = modal.querySelector('#tab-title');
     if (titleTab) {
@@ -837,6 +905,26 @@ Please analyze all aspects and return a JSON response with the following structu
       );
     }
 
+    // Update reviews tab
+    const reviewsTab = modal.querySelector('#tab-reviews');
+    if (reviewsTab) {
+      console.log('Current product reviews:', product.reviews);
+      console.log('Suggested reviews:', auditResults.suggestedReviews);
+      
+      const currentReviews = formatReviews(product.reviews || []);
+      const suggestedReviews = formatReviews(auditResults.suggestedReviews || []);
+      console.log('Formatted current reviews:', currentReviews);
+      console.log('Formatted suggested reviews:', suggestedReviews);
+
+      reviewsTab.innerHTML = createComparisonBlock(
+        currentReviews,
+        suggestedReviews,
+        auditResults.reviewsScore,
+        auditResults.reviewsAnalysis,
+        'reviews'
+      );
+    }
+
     // Update global analysis tab
     const analysisTab = modal.querySelector('#tab-analysis');
     if (analysisTab) {
@@ -869,34 +957,29 @@ Please analyze all aspects and return a JSON response with the following structu
           button.textContent = 'Applying...';
           button.classList.add('loading');
 
-          // Format the update data
-          const updates = formatUpdateData(field, content);
-          console.log('Sending update to WooCommerce:', { productId: product.id, updates });
-
-          const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${product.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-woo-user-id': currentAuth.userId
-            },
-            body: JSON.stringify(updates)
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('API Error:', {
-              status: response.status,
-              statusText: response.statusText,
-              error: errorData
+          let response;
+          if (field === 'reviews') {
+            // Format and update reviews
+            const updates = formatUpdateData(field, content);
+            response = await updateProductReviews(product.id, updates.reviews);
+          } else {
+            // Handle other fields as before
+            const updates = formatUpdateData(field, content);
+            response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${product.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-woo-user-id': currentAuth.userId
+              },
+              body: JSON.stringify(updates)
             });
-            throw new Error(errorData.error || 'Failed to update product');
-          }
 
-          const responseData = await response.json();
-          console.log('Update response:', responseData);
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.error || 'Failed to update product');
+            }
 
-          if (!responseData.success) {
-            throw new Error(responseData.error || 'Failed to update product');
+            response = await response.json();
           }
 
           // Update the original content
@@ -915,7 +998,7 @@ Please analyze all aspects and return a JSON response with the following structu
 
         } catch (error) {
           console.error('Error applying changes:', error);
-          button.textContent = error.message || 'Error - Try Again';
+          button.textContent = 'Error!';
           button.classList.remove('loading');
           button.classList.add('error');
 
@@ -923,7 +1006,7 @@ Please analyze all aspects and return a JSON response with the following structu
             button.textContent = 'Apply Changes';
             button.classList.remove('error');
             button.disabled = false;
-          }, 3000);
+          }, 2000);
         }
       });
     });
@@ -1271,8 +1354,68 @@ Please analyze all aspects and return a JSON response with the following structu
           console.error('Error stack:', e.stack);
           return { tags: [] };
         }
+      case 'reviews':
+        try {
+          console.log('Raw content for reviews:', content);
+          
+          if (!content || content === 'No reviews') {
+            console.log('Empty or invalid reviews');
+            return { reviews: [] };
+          }
+
+          const reviews = parseReviewsFromHTML(content);
+          console.log('Formatted reviews for update:', reviews);
+          
+          if (reviews.length === 0) {
+            console.log('No reviews parsed from content');
+            return { reviews: [] };
+          }
+
+          return { reviews };
+        } catch (e) {
+          console.error('Error parsing reviews:', e);
+          console.error('Error details:', e.message);
+          console.error('Error stack:', e.stack);
+          return { reviews: [] };
+        }
       default:
         return { [field]: content };
+    }
+  }
+
+  // Function to update product reviews
+  async function updateProductReviews(productId, reviews) {
+    try {
+      const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${productId}/reviews`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-woo-user-id': currentAuth.userId
+        },
+        body: JSON.stringify({ reviews })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        throw new Error(errorData.error || 'Failed to update reviews');
+      }
+
+      const responseData = await response.json();
+      console.log('Update reviews response:', responseData);
+
+      if (!responseData.success) {
+        throw new Error(responseData.error || 'Failed to update reviews');
+      }
+
+      return responseData;
+    } catch (error) {
+      console.error('Error updating reviews:', error);
+      throw error;
     }
   }
 })();

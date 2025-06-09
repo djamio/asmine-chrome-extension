@@ -113,16 +113,16 @@
         ${products.map((p, i) => `
           <div class="product-card" data-index="${i}">
             <div class="product-header">
-              <img src="${p.image || 'https://via.placeholder.com/150'}" 
-                   alt="${p.title}"
+              <img src="${p.images?.[0]?.src || 'https://via.placeholder.com/150'}" 
+                   alt="${p.name}"
                    style="width: 100%; height: 150px; object-fit: contain; background: #f5f5f5;" />
               <span class="product-status">${p.status || 'Active'}</span>
             </div>
             <div class="product-info">
-              <h3>${p.title}</h3>
+              <h3>${p.name}</h3>
               <p class="product-meta">SKU: ${p.sku || 'N/A'} | Stock: ${p.stock_quantity || 0}</p>
               <p class="product-price">${p.price || '$0.00'}</p>
-              <p class="product-description">${p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
+              <p class="product-description">${p.short_description || p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
               <div class="product-tags">
                 ${(p.categories || []).map(cat => `
                   <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
@@ -131,7 +131,10 @@
                   <span class="tag">${typeof tag === 'object' ? tag.name : tag}</span>
                 `).join('')}
               </div>
-              <button class="generate-prompt-btn">Generate ChatGPT Prompt</button>
+              <div class="button-group">
+                <button class="generate-prompt-btn">Generate ChatGPT Prompt</button>
+                <button class="compare-btn" data-product-index="${i}" disabled>Compare Changes</button>
+              </div>
               <div class="audit-results"></div>
             </div>
           </div>
@@ -164,22 +167,34 @@
 Audit the following WooCommerce product and provide a comprehensive analysis:
 
 Product Details:
-- Title: ${p.title}
-- Description: ${p.description}
-- Price: ${p.price}
-- Stock: ${p.stock_quantity}
-- SKU: ${p.sku || 'N/A'}
+- Title: ${p.name}
+- Short Description: ${p.short_description || p.description?.substring(0, 150) + '...'}
+- Full Description: ${p.description}
+- Specifications: ${JSON.stringify(p.attributes || [])}
+- Categories: ${JSON.stringify(p.categories || [])}
+- Tags: ${JSON.stringify(p.tags || [])}
+- Reviews Count: ${p.reviews_count || 0}
 
 Please analyze all aspects and return a JSON response with the following structure:
 {
   "titleScore": number (0-100),
   "titleAnalysis": string,
   "newTitle": string,
+  "shortDescriptionScore": number (0-100),
+  "shortDescriptionAnalysis": string,
+  "newShortDescription": string,
   "descriptionScore": number (0-100),
   "descriptionAnalysis": string,
   "newDescription": string,
-  "priceAnalysis": string,
-  "inventoryAnalysis": string,
+  "specificationsScore": number (0-100),
+  "specificationsAnalysis": string,
+  "suggestedSpecs": string[],
+  "categoriesScore": number (0-100),
+  "categoriesAnalysis": string,
+  "suggestedCategories": string[],
+  "tagsScore": number (0-100),
+  "tagsAnalysis": string,
+  "suggestedTags": string[],
   "globalScore": number (0-100),
   "overallAnalysis": string,
   "priorityImprovements": string[]
@@ -217,10 +232,252 @@ Please analyze all aspects and return a JSON response with the following structu
             }
           }
         }
+
+        // Listen for ChatGPT response
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            if (mutation.addedNodes.length) {
+              const responseElement = document.querySelector('.markdown-content');
+              if (responseElement) {
+                try {
+                  const responseText = responseElement.textContent;
+                  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                  if (jsonMatch) {
+                    const auditResults = JSON.parse(jsonMatch[0]);
+                    
+                    // Store the results
+                    localStorage.setItem(`audit_${p.id}`, JSON.stringify(auditResults));
+                    
+                    // Enable the compare button
+                    const compareBtn = btn.parentElement.querySelector('.compare-btn');
+                    compareBtn.disabled = false;
+
+                    // Display the results summary
+                    const resultsDiv = btn.closest('.product-card').querySelector('.audit-results');
+                    resultsDiv.innerHTML = `
+                      <div class="audit-summary">
+                        <h4>Audit Results</h4>
+                        <p><strong>Global Score:</strong> ${auditResults.globalScore}/100</p>
+                        <p><strong>Analysis:</strong> ${auditResults.overallAnalysis}</p>
+                        <div class="priority-improvements">
+                          <h5>Priority Improvements:</h5>
+                          <ul>
+                            ${auditResults.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
+                          </ul>
+                        </div>
+                      </div>
+                    `;
+
+                    // Stop observing
+                    observer.disconnect();
+                  }
+                } catch (error) {
+                  console.error('Error parsing ChatGPT response:', error);
+                }
+              }
+            }
+          }
+        });
+
+        // Start observing ChatGPT's response area
+        const targetNode = document.querySelector('.chat-content');
+        if (targetNode) {
+          observer.observe(targetNode, { childList: true, subtree: true });
+        }
+
         setTimeout(() => {
           btn.disabled = false;
           btn.textContent = 'Generate ChatGPT Prompt';
         }, 1000);
+      });
+    });
+
+    // Add event listeners for compare buttons
+    const compareButtons = auditResultsDiv.querySelectorAll('.compare-btn');
+    compareButtons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const productIndex = parseInt(btn.dataset.productIndex);
+        const modal = document.getElementById('compareModal');
+        if (!modal) {
+          createAuditModal();
+        }
+
+        const product = products[productIndex];
+        if (!product) return;
+
+        const auditResults = JSON.parse(localStorage.getItem(`audit_${product.id}`));
+        if (!auditResults) {
+          alert('No audit results available for comparison. Please generate an audit first.');
+          return;
+        }
+
+        // Show modal
+        modal.style.display = 'block';
+
+        // Update tab contents
+        document.getElementById('tab-title').innerHTML = `
+          <div class="comparison-container">
+            <div class="version-block">
+              <h4>Original Title</h4>
+              <div class="original-content">${product.name}</div>
+            </div>
+            <div class="version-block">
+              <h4>Enhanced Title <span class="score">(Score: ${auditResults.titleScore}/100)</span></h4>
+              <div class="enhanced-content" contenteditable="true">${auditResults.newTitle}</div>
+              <button class="apply-changes-btn" data-field="name">Apply Changes</button>
+            </div>
+          </div>
+          <div class="analysis-section">
+            <p><strong>Analysis:</strong> ${auditResults.titleAnalysis}</p>
+          </div>
+        `;
+
+        document.getElementById('tab-short-desc').innerHTML = `
+          <div class="comparison-container">
+            <div class="version-block">
+              <h4>Original Short Description</h4>
+              <div class="original-content">${product.short_description || ''}</div>
+            </div>
+            <div class="version-block">
+              <h4>Enhanced Short Description <span class="score">(Score: ${auditResults.shortDescriptionScore}/100)</span></h4>
+              <div class="enhanced-content" contenteditable="true">${auditResults.newShortDescription}</div>
+              <button class="apply-changes-btn" data-field="short_description">Apply Changes</button>
+            </div>
+          </div>
+          <div class="analysis-section">
+            <p><strong>Analysis:</strong> ${auditResults.shortDescriptionAnalysis}</p>
+          </div>
+        `;
+
+        document.getElementById('tab-description').innerHTML = `
+          <div class="comparison-container">
+            <div class="version-block">
+              <h4>Original Description</h4>
+              <div class="original-content">${product.description || ''}</div>
+            </div>
+            <div class="version-block">
+              <h4>Enhanced Description <span class="score">(Score: ${auditResults.descriptionScore}/100)</span></h4>
+              <div class="enhanced-content" contenteditable="true">${auditResults.newDescription}</div>
+              <button class="apply-changes-btn" data-field="description">Apply Changes</button>
+            </div>
+          </div>
+          <div class="analysis-section">
+            <p><strong>Analysis:</strong> ${auditResults.descriptionAnalysis}</p>
+          </div>
+        `;
+
+        document.getElementById('tab-specs').innerHTML = `
+          <div class="comparison-container">
+            <div class="version-block">
+              <h4>Current Specifications</h4>
+              <div class="original-content">
+                ${(product.attributes || []).map(attr => `
+                  <p><strong>${attr.name}:</strong> ${attr.options.join(', ')}</p>
+                `).join('') || 'No specifications available'}
+              </div>
+            </div>
+            <div class="version-block">
+              <h4>Suggested Specifications <span class="score">(Score: ${auditResults.specificationsScore}/100)</span></h4>
+              <div class="enhanced-content">
+                ${auditResults.suggestedSpecs.map(spec => `<p>${spec}</p>`).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="analysis-section">
+            <p><strong>Analysis:</strong> ${auditResults.specificationsAnalysis}</p>
+          </div>
+        `;
+
+        document.getElementById('tab-categories').innerHTML = `
+          <div class="comparison-container">
+            <div class="version-block">
+              <h4>Current Categories</h4>
+              <div class="original-content">
+                ${(product.categories || []).map(cat => `
+                  <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
+                `).join('') || 'No categories assigned'}
+              </div>
+            </div>
+            <div class="version-block">
+              <h4>Suggested Categories <span class="score">(Score: ${auditResults.categoriesScore}/100)</span></h4>
+              <div class="enhanced-content">
+                ${auditResults.suggestedCategories.map(cat => `
+                  <span class="category-tag">${cat}</span>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="analysis-section">
+            <p><strong>Analysis:</strong> ${auditResults.categoriesAnalysis}</p>
+          </div>
+        `;
+
+        document.getElementById('tab-tags').innerHTML = `
+          <div class="comparison-container">
+            <div class="version-block">
+              <h4>Current Tags</h4>
+              <div class="original-content">
+                ${(product.tags || []).map(tag => `
+                  <span class="tag">${typeof tag === 'object' ? tag.name : tag}</span>
+                `).join('') || 'No tags assigned'}
+              </div>
+            </div>
+            <div class="version-block">
+              <h4>Suggested Tags <span class="score">(Score: ${auditResults.tagsScore}/100)</span></h4>
+              <div class="enhanced-content">
+                ${auditResults.suggestedTags.map(tag => `
+                  <span class="tag">${tag}</span>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="analysis-section">
+            <p><strong>Analysis:</strong> ${auditResults.tagsAnalysis}</p>
+          </div>
+        `;
+
+        // Add event listeners for apply changes buttons
+        modal.querySelectorAll('.apply-changes-btn').forEach(applyBtn => {
+          applyBtn.addEventListener('click', async () => {
+            const field = applyBtn.dataset.field;
+            const newContent = applyBtn.parentElement.querySelector('.enhanced-content').textContent;
+            
+            try {
+              applyBtn.disabled = true;
+              applyBtn.textContent = 'Applying...';
+              
+              // Update the product via WooCommerce API
+              const response = await fetch(`${apiBaseUrl}/products/${product.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-woo-user-id': localStorage.getItem('user_id')
+                },
+                body: JSON.stringify({
+                  [field]: newContent
+                })
+              });
+
+              if (!response.ok) throw new Error('Failed to update product');
+              
+              applyBtn.textContent = 'Applied!';
+              setTimeout(() => {
+                applyBtn.textContent = 'Apply Changes';
+                applyBtn.disabled = false;
+              }, 2000);
+
+              // Refresh the product display
+              renderPage();
+            } catch (error) {
+              console.error('Error applying changes:', error);
+              applyBtn.textContent = 'Error';
+              setTimeout(() => {
+                applyBtn.textContent = 'Apply Changes';
+                applyBtn.disabled = false;
+              }, 2000);
+            }
+          });
+        });
       });
     });
 

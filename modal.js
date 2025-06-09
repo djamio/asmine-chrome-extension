@@ -3,17 +3,16 @@ function createAuditModal() {
     modal.id = 'compareModal';
     modal.style.display = 'none';
     modal.innerHTML = `
-      <div class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
-      <div class="modal-content" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 1200px; max-height: 90vh; overflow-y: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 9999;">
-        <button id="closeModalBtn" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer; z-index: 10000;">×</button>
-        <div id="compareTabs" style="position: sticky; top: 0; background: white; padding: 10px 0; border-bottom: 1px solid #eee; margin: -20px -20px 20px -20px; padding: 20px;">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <button id="closeModalBtn">×</button>
+        <div id="compareTabs">
           <button class="tab-btn active" data-tab="title">Title</button>
           <button class="tab-btn" data-tab="short-desc">Short Description</button>
-          <button class="tab-btn" data-tab="description">Description</button>
+          <button class="tab-btn" data-tab="description">Full Description</button>
           <button class="tab-btn" data-tab="specs">Specifications</button>
           <button class="tab-btn" data-tab="categories">Categories</button>
           <button class="tab-btn" data-tab="tags">Tags</button>
-          <button class="tab-btn" data-tab="reviews">Reviews</button>
         </div>
         <div id="compareContent">
           <div id="tab-title" class="tab-content"></div>
@@ -22,7 +21,6 @@ function createAuditModal() {
           <div id="tab-specs" class="tab-content" style="display: none;"></div>
           <div id="tab-categories" class="tab-content" style="display: none;"></div>
           <div id="tab-tags" class="tab-content" style="display: none;"></div>
-          <div id="tab-reviews" class="tab-content" style="display: none;"></div>
         </div>
       </div>
     `;

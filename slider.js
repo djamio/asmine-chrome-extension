@@ -419,12 +419,12 @@ Please analyze all aspects and return a JSON response with the following structu
         <div class="comparison-container">
           <div class="version-block">
             <h4>Original Title</h4>
-            <div class="original-content">${product.name}</div>
+            <div class="original-content">${product.title}</div>
           </div>
           <div class="version-block">
             <h4>Enhanced Title <span class="score">(Score: ${auditResults.titleScore}/100)</span></h4>
             <div class="enhanced-content" contenteditable="true">${auditResults.newTitle}</div>
-            <button class="apply-changes-btn" data-field="name">Apply Changes</button>
+            <button class="apply-changes-btn" data-field="title">Apply Changes</button>
           </div>
         </div>
         <div class="analysis-section">
@@ -440,12 +440,12 @@ Please analyze all aspects and return a JSON response with the following structu
         <div class="comparison-container">
           <div class="version-block">
             <h4>Original Short Description</h4>
-            <div class="original-content">${product.short_description || ''}</div>
+            <div class="original-content">${product.shortDescription || ''}</div>
           </div>
           <div class="version-block">
             <h4>Enhanced Short Description <span class="score">(Score: ${auditResults.shortDescriptionScore}/100)</span></h4>
             <div class="enhanced-content" contenteditable="true">${auditResults.newShortDescription}</div>
-            <button class="apply-changes-btn" data-field="short_description">Apply Changes</button>
+            <button class="apply-changes-btn" data-field="shortDescription">Apply Changes</button>
           </div>
         </div>
         <div class="analysis-section">
@@ -705,7 +705,7 @@ Please analyze all aspects and return a JSON response with the following structu
     compareButtons.forEach(btn => {
       btn.addEventListener('click', async () => {
         const productId = btn.dataset.productId;
-        const modal = document.getElementById('compareModal');
+        const modal = document.getElementById('auditModal');
         if (!modal) {
           createAuditModal();
         }
@@ -720,7 +720,7 @@ Please analyze all aspects and return a JSON response with the following structu
         }
 
         // Show modal
-        modal.style.display = 'block';
+        modal.querySelector('.audit-modal').style.display = 'block';
 
         // Update modal content
         updateModalContent(modal, product, storedData.audit);

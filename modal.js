@@ -14,20 +14,39 @@ function createAuditModal() {
       <div class="audit-modal-content">
         <span class="close">&times;</span>
         <div class="tabs">
-          <button class="tab-btn active" data-tab="title">Titre</button>
+          <button class="tab-btn active" data-tab="title">Title</button>
+          <button class="tab-btn" data-tab="short-desc">Short Description</button>
           <button class="tab-btn" data-tab="description">Description</button>
-          <button class="tab-btn" data-tab="analysis">Analyse Globale</button>
+          <button class="tab-btn" data-tab="specifications">Specifications</button>
+          <button class="tab-btn" data-tab="categories">Categories</button>
+          <button class="tab-btn" data-tab="tags">Tags</button>
+          <button class="tab-btn" data-tab="analysis">Global Analysis</button>
         </div>
         <div class="tab-content">
           <div id="tab-title" class="tab-pane active">
-            <h3>Analyse du Titre</h3>
+            <h3>Title Analysis</h3>
             <div class="comparison">
               <div class="original">
-                <h4>Titre Original</h4>
+                <h4>Original Title</h4>
                 <div class="content original-content"></div>
               </div>
               <div class="suggested">
-                <h4>Titre Suggéré</h4>
+                <h4>Enhanced Title</h4>
+                <div class="content suggested-content"></div>
+                <div class="score"></div>
+                <div class="analysis"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-short-desc" class="tab-pane">
+            <h3>Short Description Analysis</h3>
+            <div class="comparison">
+              <div class="original">
+                <h4>Original Short Description</h4>
+                <div class="content original-content"></div>
+              </div>
+              <div class="suggested">
+                <h4>Enhanced Short Description</h4>
                 <div class="content suggested-content"></div>
                 <div class="score"></div>
                 <div class="analysis"></div>
@@ -35,14 +54,59 @@ function createAuditModal() {
             </div>
           </div>
           <div id="tab-description" class="tab-pane">
-            <h3>Analyse de la Description</h3>
+            <h3>Description Analysis</h3>
             <div class="comparison">
               <div class="original">
-                <h4>Description Originale</h4>
+                <h4>Original Description</h4>
                 <div class="content original-content"></div>
               </div>
               <div class="suggested">
-                <h4>Description Suggérée</h4>
+                <h4>Enhanced Description</h4>
+                <div class="content suggested-content"></div>
+                <div class="score"></div>
+                <div class="analysis"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-specifications" class="tab-pane">
+            <h3>Specifications Analysis</h3>
+            <div class="comparison">
+              <div class="original">
+                <h4>Current Specifications</h4>
+                <div class="content original-content"></div>
+              </div>
+              <div class="suggested">
+                <h4>Suggested Specifications</h4>
+                <div class="content suggested-content"></div>
+                <div class="score"></div>
+                <div class="analysis"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-categories" class="tab-pane">
+            <h3>Categories Analysis</h3>
+            <div class="comparison">
+              <div class="original">
+                <h4>Current Categories</h4>
+                <div class="content original-content"></div>
+              </div>
+              <div class="suggested">
+                <h4>Suggested Categories</h4>
+                <div class="content suggested-content"></div>
+                <div class="score"></div>
+                <div class="analysis"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-tags" class="tab-pane">
+            <h3>Tags Analysis</h3>
+            <div class="comparison">
+              <div class="original">
+                <h4>Current Tags</h4>
+                <div class="content original-content"></div>
+              </div>
+              <div class="suggested">
+                <h4>Suggested Tags</h4>
                 <div class="content suggested-content"></div>
                 <div class="score"></div>
                 <div class="analysis"></div>
@@ -50,11 +114,11 @@ function createAuditModal() {
             </div>
           </div>
           <div id="tab-analysis" class="tab-pane">
-            <h3>Analyse Globale</h3>
+            <h3>Global Analysis</h3>
             <div class="global-score"></div>
             <div class="overall-analysis"></div>
             <div class="improvements">
-              <h4>Améliorations Prioritaires</h4>
+              <h4>Priority Improvements</h4>
               <ul class="improvements-list"></ul>
             </div>
           </div>

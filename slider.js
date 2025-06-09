@@ -14,13 +14,21 @@
   let currentPage = 1;
   const productAuditData = new Map();
   let auditResultsDiv;
+  let currentAuth = null;
 
   // Function to fetch products from API
   async function fetchProducts(page = 1) {
     try {
+      console.log('Fetching products for page:', page);
       // Check if authorized with WooCommerce first
       const auth = await chrome.storage.local.get(['wooAuth']);
+      console.log('Auth state:', auth);
+      
+      // Store current auth state
+      currentAuth = auth.wooAuth;
+      
       if (!auth.wooAuth?.isConnected || !auth.wooAuth?.userId) {
+        console.log('Not authenticated, showing connect message');
         auditResultsDiv.innerHTML = `
           <div style="text-align: center; padding: 20px;">
             <p>Please connect to WooCommerce first to view products.</p>
@@ -52,6 +60,7 @@
         </div>
       `;
 
+      console.log('Making API request with userId:', auth.wooAuth.userId);
       const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products?page=${page}`, {
         method: 'GET',
         headers: {
@@ -60,30 +69,62 @@
         }
       });
 
+      console.log('API response status:', response.status);
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
+        console.error('API error:', errorData);
+        if (response.status === 401 || response.status === 403) {
+          // Clear auth state and show connect button
+          currentAuth = null;
+          await chrome.storage.local.set({ wooAuth: { isConnected: false, userId: null } });
+          throw new Error('Authentication failed. Please reconnect to WooCommerce.');
+        }
         throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('WooCommerce products response:', data);
+      console.log('API response data:', data);
       
       if (!data.success) {
+        console.error('API response indicates failure:', data.error);
         throw new Error(data.error || 'API response indicates failure');
       }
 
       // Return pagination data along with products
-      return {
+      const result = {
         products: data.products || [],
         totalProducts: data.totalProducts || data.products?.length || 0,
         totalPages: data.totalPages || Math.ceil((data.totalProducts || data.products?.length) / 10),
         itemsPerPage: data.itemsPerPage || 10
       };
+      console.log('Processed API response:', result);
+      return result;
     } catch (error) {
-      console.error('Error fetching WooCommerce products:', error);
-      if (auditResultsDiv) {
+      console.error('Error in fetchProducts:', error);
+      
+      // Check if the error is due to authentication
+      if (error.message.includes('401') || error.message.includes('403') || error.message.includes('authentication')) {
+        // Clear auth state and show connect button
+        currentAuth = null;
+        await chrome.storage.local.set({ wooAuth: { isConnected: false, userId: null } });
         auditResultsDiv.innerHTML = `
-          <div style="color: red; padding: 20px; text-align: center;">
+          <div style="text-align: center; padding: 20px;">
+            <p>Your WooCommerce connection has expired. Please reconnect.</p>
+            <button id="goToWooAuth" class="btn btn-primary">Go to WooCommerce Connection</button>
+          </div>
+        `;
+        
+        // Add click handler for the auth button
+        document.getElementById('goToWooAuth')?.addEventListener('click', () => {
+          const wooAuthTab = document.querySelector('[data-tab="connect"]');
+          if (wooAuthTab) {
+            wooAuthTab.click();
+          }
+        });
+      } else {
+        // Show general error with retry button
+        auditResultsDiv.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
             <h3>Error Loading WooCommerce Products</h3>
             <p>${error.message}</p>
             <button id="retryWooProducts" class="btn btn-secondary">Retry</button>
@@ -99,19 +140,106 @@
     }
   }
 
+  async function attachPaginationListeners(totalPages) {
+    console.log('Attaching pagination listeners, totalPages:', totalPages);
+    
+    // Remove old event listeners by cloning and replacing elements
+    ['firstPage', 'prevPage', 'nextPage', 'lastPage'].forEach(id => {
+      const oldElement = document.getElementById(id);
+      if (oldElement) {
+        const newElement = oldElement.cloneNode(true);
+        oldElement.parentNode.replaceChild(newElement, oldElement);
+      }
+    });
+
+    // Add pagination event listeners
+    const firstPageBtn = document.getElementById('firstPage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
+
+    console.log('Found pagination buttons:', {
+      first: !!firstPageBtn,
+      prev: !!prevPageBtn,
+      next: !!nextPageBtn,
+      last: !!lastPageBtn
+    });
+
+    if (nextPageBtn) {
+      nextPageBtn.onclick = async () => {
+        console.log('Next button clicked, current page:', currentPage, 'total pages:', totalPages);
+        if (currentPage < totalPages && currentAuth?.isConnected) {
+          currentPage++;
+          console.log('Moving to page:', currentPage);
+          await renderPage();
+        }
+      };
+    }
+
+    if (prevPageBtn) {
+      prevPageBtn.onclick = async () => {
+        console.log('Previous button clicked, current page:', currentPage);
+        if (currentPage > 1 && currentAuth?.isConnected) {
+          currentPage--;
+          console.log('Moving to page:', currentPage);
+          await renderPage();
+        }
+      };
+    }
+
+    if (firstPageBtn) {
+      firstPageBtn.onclick = async () => {
+        console.log('First button clicked, current page:', currentPage);
+        if (currentPage !== 1 && currentAuth?.isConnected) {
+          currentPage = 1;
+          console.log('Moving to first page');
+          await renderPage();
+        }
+      };
+    }
+
+    if (lastPageBtn) {
+      lastPageBtn.onclick = async () => {
+        console.log('Last button clicked, current page:', currentPage, 'total pages:', totalPages);
+        if (currentPage !== totalPages && currentAuth?.isConnected) {
+          currentPage = totalPages;
+          console.log('Moving to last page:', totalPages);
+          await renderPage();
+        }
+      };
+    }
+  }
+
   async function renderPage() {
-    if (!auditResultsDiv) return;
+    console.log('Rendering page:', currentPage);
+    if (!auditResultsDiv) {
+      console.error('auditResultsDiv not found');
+      return;
+    }
+
+    // Check if we have current auth state
+    if (!currentAuth?.isConnected) {
+      console.log('No auth state, checking storage');
+      const auth = await chrome.storage.local.get(['wooAuth']);
+      currentAuth = auth.wooAuth;
+      console.log('Retrieved auth state:', currentAuth);
+    }
 
     const data = await fetchProducts(currentPage);
-    if (!data) return;
+    console.log('Fetched products data:', data);
+    if (!data) {
+      console.log('No data returned from fetchProducts');
+      return;
+    }
 
     const { products, totalProducts, totalPages } = data;
+    console.log(`Rendering ${products.length} products, page ${currentPage}/${totalPages}`);
 
     // Create product cards
     auditResultsDiv.innerHTML = `
       <div class="products-grid">
         ${products.map((p, i) => `
-          <div class="product-card" data-index="${i}">
+          <div class="product-card" data-index="${i}" data-product-id="${p.id}">
             <div class="product-header">
               <img src="${p.images?.[0]?.src || 'https://via.placeholder.com/150'}" 
                    alt="${p.name}"
@@ -133,7 +261,7 @@
               </div>
               <div class="button-group">
                 <button class="generate-prompt-btn">Generate ChatGPT Prompt</button>
-                <button class="compare-btn" data-product-index="${i}" disabled>Compare Changes</button>
+                <button class="compare-btn" data-product-id="${p.id}" disabled>Compare Changes</button>
               </div>
               <div class="audit-results"></div>
             </div>
@@ -154,6 +282,10 @@
         <button id="lastPage" ${currentPage >= totalPages ? 'disabled' : ''}>Last ⟫</button>
       </div>
     `;
+
+    console.log('Page rendered, attaching pagination listeners');
+    // Attach pagination listeners
+    await attachPaginationListeners(totalPages);
 
     // Add event listeners for generate prompt buttons
     const buttons = auditResultsDiv.querySelectorAll('.generate-prompt-btn');
@@ -296,13 +428,13 @@ Please analyze all aspects and return a JSON response with the following structu
     const compareButtons = auditResultsDiv.querySelectorAll('.compare-btn');
     compareButtons.forEach(btn => {
       btn.addEventListener('click', async () => {
-        const productIndex = parseInt(btn.dataset.productIndex);
+        const productId = btn.dataset.productId;
         const modal = document.getElementById('compareModal');
         if (!modal) {
           createAuditModal();
         }
 
-        const product = products[productIndex];
+        const product = products.find(p => p.id === productId);
         if (!product) return;
 
         const auditResults = JSON.parse(localStorage.getItem(`audit_${product.id}`));
@@ -480,35 +612,6 @@ Please analyze all aspects and return a JSON response with the following structu
         });
       });
     });
-
-    // Add pagination event listeners
-    document.getElementById('firstPage')?.addEventListener('click', () => {
-      if (currentPage !== 1) {
-        currentPage = 1;
-        renderPage();
-      }
-    });
-
-    document.getElementById('prevPage')?.addEventListener('click', () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderPage();
-      }
-    });
-
-    document.getElementById('nextPage')?.addEventListener('click', () => {
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderPage();
-      }
-    });
-
-    document.getElementById('lastPage')?.addEventListener('click', () => {
-      if (currentPage !== totalPages) {
-        currentPage = totalPages;
-        renderPage();
-      }
-    });
   }
 
   function injectSlider() {
@@ -563,7 +666,7 @@ Please analyze all aspects and return a JSON response with the following structu
         console.log('Number of tab contents found:', tabContents.length);
 
         tabButtons.forEach(btn => {
-          btn.addEventListener('click', () => {
+          btn.addEventListener('click', async () => {
             const target = btn.getAttribute('data-tab');
             console.log('Tab clicked:', target);
             
@@ -576,6 +679,15 @@ Please analyze all aspects and return a JSON response with the following structu
             const targetContent = document.getElementById(`tab-${target}`);
             if (targetContent) {
               targetContent.style.display = 'block';
+              
+              // If switching to audit tab, check auth state and render if needed
+              if (target === 'audit') {
+                const auth = await chrome.storage.local.get(['wooAuth']);
+                currentAuth = auth.wooAuth;
+                if (currentAuth?.isConnected) {
+                  renderPage();
+                }
+              }
             }
           });
         });

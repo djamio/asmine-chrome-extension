@@ -685,13 +685,27 @@ Please analyze all aspects and return a JSON response with the following structu
 
     // Helper function to format specifications
     function formatSpecifications(specs) {
-      if (!Array.isArray(specs) || specs.length === 0) return 'No specifications';
-      return specs.map(spec => `
-        <div class="specification-item">
-          <strong>${spec.name || ''}</strong>
-          <span>${Array.isArray(spec.options) ? spec.options.join(', ') : ''}</span>
-        </div>
-      `).join('');
+      console.log('Formatting specifications:', specs);
+      
+      if (!Array.isArray(specs) || specs.length === 0) {
+        console.log('No specifications to format');
+        return 'No specifications';
+      }
+      
+      return specs.map(spec => {
+        console.log('Processing spec:', spec);
+        
+        // Handle different specification formats
+        if (typeof spec === 'string') {
+          // If it's already in "Name: Values" format
+          return `<div class="specification-item">${spec}</div>`;
+        }
+        
+        const name = spec.name || '';
+        const options = Array.isArray(spec.options) ? spec.options.join(', ') : (spec.options || '');
+        
+        return `<div class="specification-item">${name}: ${options}</div>`;
+      }).join('\n');
     }
 
     // Update title tab
@@ -733,9 +747,31 @@ Please analyze all aspects and return a JSON response with the following structu
     // Update specifications tab
     const specsTab = modal.querySelector('#tab-specifications');
     if (specsTab) {
+      console.log('Current product specifications:', product.specifications);
+      console.log('Suggested specifications:', auditResults.suggestedSpecs);
+      
+      const currentSpecs = formatSpecifications(product.specifications);
+      console.log('Formatted current specs:', currentSpecs);
+      
+      let suggestedSpecs;
+      if (Array.isArray(auditResults.suggestedSpecs)) {
+        suggestedSpecs = auditResults.suggestedSpecs.map(spec => {
+          if (typeof spec === 'string') {
+            // If it's already in "Name: Values" format
+            return `<div class="specification-item">${spec}</div>`;
+          }
+          const name = spec.name || '';
+          const options = Array.isArray(spec.options) ? spec.options.join(', ') : (spec.options || '');
+          return `<div class="specification-item">${name}: ${options}</div>`;
+        }).join('\n');
+      } else {
+        suggestedSpecs = 'No suggestions';
+      }
+      console.log('Formatted suggested specs:', suggestedSpecs);
+
       specsTab.innerHTML = createComparisonBlock(
-        formatSpecifications(product.specifications),
-        (auditResults.suggestedSpecs || []).map(spec => `<div class="specification-item">${spec}</div>`).join(''),
+        currentSpecs,
+        suggestedSpecs,
         auditResults.specificationsScore,
         auditResults.specificationsAnalysis,
         'attributes'
@@ -1089,21 +1125,81 @@ Please analyze all aspects and return a JSON response with the following structu
         return { short_description: content };
       case 'attributes':
         try {
-          return { attributes: JSON.parse(content) };
+          console.log('Raw content for attributes:', content);
+          
+          // If content is empty or invalid
+          if (!content || content === 'No specifications') {
+            console.log('Empty or invalid content');
+            return { attributes: [] };
+          }
+
+          // Split content into lines and parse each specification
+          const lines = content.split('\n').filter(line => line.trim());
+          console.log('Split lines:', lines);
+
+          const specs = lines.map(line => {
+            console.log('Processing line:', line);
+            
+            // Try to match HTML format first
+            let match = line.match(/<strong>(.*?)<\/strong>:?\s*(.*)/);
+            
+            if (!match) {
+              // Try plain text format (Name: Value1, Value2)
+              match = line.match(/(.*?):\s*(.*)/);
+            }
+
+            if (!match) {
+              console.log('No match found for line:', line);
+              return null;
+            }
+            
+            const [, name, optionsStr] = match;
+            console.log('Matched name:', name, 'options:', optionsStr);
+            
+            const options = optionsStr
+              .split(',')
+              .map(o => o.trim())
+              .filter(o => o);
+              
+            console.log('Parsed options:', options);
+            
+            return {
+              name: name.trim(),
+              options: options.length > 0 ? options : [''],
+              visible: true,
+              variation: false,
+              position: 0
+            };
+          }).filter(spec => spec && spec.name);
+
+          console.log('Final formatted specifications:', specs);
+          return { attributes: specs };
         } catch (e) {
-          console.error('Error parsing attributes:', e);
+          console.error('Error parsing specifications:', e);
+          console.error('Error details:', e.message);
+          console.error('Error stack:', e.stack);
           return { attributes: [] };
         }
       case 'categories':
         try {
-          return { categories: JSON.parse(content) };
+          const categoryTags = content.match(/<span class="category-tag">(.*?)<\/span>/g) || [];
+          const categories = categoryTags.map(tag => {
+            const name = tag.match(/<span class="category-tag">(.*?)<\/span>/)[1];
+            return { name };
+          });
+          return { categories };
         } catch (e) {
           console.error('Error parsing categories:', e);
           return { categories: [] };
         }
       case 'tags':
         try {
-          return { tags: JSON.parse(content) };
+          const tagSpans = content.match(/<span class="tag">(.*?)<\/span>/g) || [];
+          const tags = tagSpans.map(tag => {
+            const name = tag.match(/<span class="tag">(.*?)<\/span>/)[1];
+            return { name };
+          });
+          return { tags };
         } catch (e) {
           console.error('Error parsing tags:', e);
           return { tags: [] };

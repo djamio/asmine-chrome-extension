@@ -495,13 +495,15 @@ Please analyze all aspects and return a JSON response with the following structu
         
         let responseElement = null;
         for (const selector of selectors) {
-          const element = document.querySelector(selector);
-          if (element) {
-            console.log('Found response element with selector:', selector);
-            responseElement = element;
+          const elements = Array.from(document.querySelectorAll(selector));
+          if (elements.length > 0) {
+            // Pick the last element
+            responseElement = elements[elements.length - 1];
+            console.log('Found latest response element with selector:', selector);
             break;
           }
         }
+        
 
         if (responseElement) {
           try {
@@ -796,19 +798,34 @@ Please analyze all aspects and return a JSON response with the following structu
           button.textContent = 'Applying...';
           button.classList.add('loading');
 
+          // Format the update data
+          const updates = formatUpdateData(field, content);
+          console.log('Sending update to WooCommerce:', { productId: product.id, updates });
+
           const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${product.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               'x-woo-user-id': currentAuth.userId
             },
-            body: JSON.stringify({
-              [field]: content
-            })
+            body: JSON.stringify(updates)
           });
 
           if (!response.ok) {
-            throw new Error('Failed to update product');
+            const errorData = await response.json().catch(() => ({}));
+            console.error('API Error:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData
+            });
+            throw new Error(errorData.error || 'Failed to update product');
+          }
+
+          const responseData = await response.json();
+          console.log('Update response:', responseData);
+
+          if (!responseData.success) {
+            throw new Error(responseData.error || 'Failed to update product');
           }
 
           // Update the original content
@@ -827,7 +844,7 @@ Please analyze all aspects and return a JSON response with the following structu
 
         } catch (error) {
           console.error('Error applying changes:', error);
-          button.textContent = 'Error - Try Again';
+          button.textContent = error.message || 'Error - Try Again';
           button.classList.remove('loading');
           button.classList.add('error');
 
@@ -1059,5 +1076,40 @@ Please analyze all aspects and return a JSON response with the following structu
         });
       })
       .catch(error => console.error('Error injecting slider:', error));
+  }
+
+  function formatUpdateData(field, content) {
+    // Format data according to WooCommerce API structure
+    switch (field) {
+      case 'name':
+        return { name: content };
+      case 'description':
+        return { description: content };
+      case 'short_description':
+        return { short_description: content };
+      case 'attributes':
+        try {
+          return { attributes: JSON.parse(content) };
+        } catch (e) {
+          console.error('Error parsing attributes:', e);
+          return { attributes: [] };
+        }
+      case 'categories':
+        try {
+          return { categories: JSON.parse(content) };
+        } catch (e) {
+          console.error('Error parsing categories:', e);
+          return { categories: [] };
+        }
+      case 'tags':
+        try {
+          return { tags: JSON.parse(content) };
+        } catch (e) {
+          console.error('Error parsing tags:', e);
+          return { tags: [] };
+        }
+      default:
+        return { [field]: content };
+    }
   }
 })();

@@ -200,7 +200,7 @@
     try {
       console.log('Fetching products for page:', page);
       // Check if authorized with WooCommerce first
-      const auth = await chrome.storage.local.get(['wooAuth']);
+      const auth = JSON.parse(localStorage.getItem('wooAuth'));
       console.log('Auth state:', auth);
       
       // Store current auth state
@@ -255,7 +255,7 @@
         if (response.status === 401 || response.status === 403) {
           // Clear auth state and show connect button
           currentAuth = null;
-          await chrome.storage.local.set({ wooAuth: { isConnected: false, userId: null } });
+          localStorage.setItem('wooAuth', JSON.stringify({ isConnected: false, userId: null }));
           throw new Error('Authentication failed. Please reconnect to WooCommerce.');
         }
         throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
@@ -285,7 +285,7 @@
       if (error.message.includes('401') || error.message.includes('403') || error.message.includes('authentication')) {
         // Clear auth state and show connect button
         currentAuth = null;
-        await chrome.storage.local.set({ wooAuth: { isConnected: false, userId: null } });
+        localStorage.setItem('wooAuth', JSON.stringify({ isConnected: false, userId: null }));
         auditResultsDiv.innerHTML = `
           <div style="text-align: center; padding: 20px;">
             <p>Your WooCommerce connection has expired. Please reconnect.</p>
@@ -529,9 +529,7 @@ Please analyze all aspects and return a JSON response with the following structu
                   console.log('Successfully parsed JSON:', parsed);
                   
                   // Verify this is our audit results by checking required fields
-                  if (parsed.titleScore !== undefined && 
-                      parsed.overallAnalysis !== undefined && 
-                      parsed.priorityImprovements !== undefined) {
+                  if (parsed.titleScore !== undefined) {
                     console.log('Found valid audit results JSON');
                     
                     // Store the audit results and product data
@@ -890,7 +888,7 @@ Please analyze all aspects and return a JSON response with the following structu
     // Check if we have current auth state
     if (!currentAuth?.isConnected) {
       console.log('No auth state, checking storage');
-      const auth = await chrome.storage.local.get(['wooAuth']);
+      const auth = JSON.parse(localStorage.getItem('wooAuth'));
       currentAuth = auth.wooAuth;
       console.log('Retrieved auth state:', currentAuth);
     }
@@ -1029,7 +1027,7 @@ Please analyze all aspects and return a JSON response with the following structu
               
               // If switching to audit tab, check auth state and render if needed
               if (target === 'audit') {
-                const auth = await chrome.storage.local.get(['wooAuth']);
+                const auth = JSON.parse(localStorage.getItem('wooAuth'));
                 currentAuth = auth.wooAuth;
                 if (currentAuth?.isConnected) {
                   renderPage();

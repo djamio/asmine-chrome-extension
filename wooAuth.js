@@ -40,7 +40,7 @@ class WooAuth {
     console.log('Initializing WooAuth');
     try {
       // Check if we have stored auth data
-      const auth = await chrome.storage.local.get(['wooAuth']);
+    const auth = JSON.parse(localStorage.getItem('wooAuth'));
       console.log('Stored auth data:', auth);
 
       if (auth.wooAuth?.isConnected && auth.wooAuth?.userId && auth.wooAuth?.storeUrl) {
@@ -74,13 +74,13 @@ class WooAuth {
 
   async generateUserId() {
     // Get or create a unique ID for this extension installation
-    const stored = await chrome.storage.local.get(['extensionId']);
+    const stored = localStorage.getItem('extensionId');
     if (stored.extensionId) {
       return stored.extensionId;
     }
     
     const newId = 'ext_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-    await chrome.storage.local.set({ extensionId: newId });
+    localStorage.setItem('extensionId', JSON.stringify({ extensionId: newId }));
     return newId;
   }
 
@@ -124,15 +124,15 @@ class WooAuth {
       // Get or generate the extension ID
       const userId = await this.generateUserId();
 
-      // Store shop URL and userId for later use
-      await chrome.storage.local.set({
+
+    localStorage.setItem('wooAuth', JSON.stringify({
         wooAuth: {
           shopUrl: shopUrl,
           userId: userId,
           isConnected: false,
           timestamp: Date.now()
         }
-      });
+      }));
 
       // Build the authorization URL with the correct parameters
       const authUrl = this.buildAuthUrl(shopUrl, userId);
@@ -173,15 +173,16 @@ class WooAuth {
 
       // Check if we have a successful authentication
       if (data.success && data.isAuthenticated) {
-        // Store the authenticated state
-        await chrome.storage.local.set({
+       
+
+        localStorage.setItem('wooAuth', JSON.stringify({
           wooAuth: {
             isConnected: true,
             userId: userId,
             storeUrl: data.store_url,
             timestamp: Date.now()
           }
-        });
+        }));
 
         return {
           success: true,
@@ -296,7 +297,7 @@ class WooAuth {
 
   async resetAuth(showUI = true) {
     try {
-      await chrome.storage.local.remove('wooAuth');
+    localStorage.removeItem('wooAuth');
       if (showUI) {
         await this.updateUI(false);
       }
@@ -349,7 +350,7 @@ class WooAuth {
 
     // Get userId and dispatch event
     if (isConnected) {
-      const auth = await chrome.storage.local.get(['wooAuth']);
+    const auth = JSON.parse(localStorage.getItem('wooAuth'));
       document.dispatchEvent(new CustomEvent('wooAuthChanged', {
         detail: { 
           connected: isConnected,

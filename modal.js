@@ -1,92 +1,244 @@
 function createAuditModal() {
-    const modal = document.createElement('div');
-    modal.id = 'compareModal';
-    modal.style.display = 'none';
-    modal.innerHTML = `
-      <div class="modal-overlay"></div>
-      <div class="modal-content">
-        <button id="closeModalBtn">×</button>
-        <div id="compareTabs">
-          <button class="tab-btn active" data-tab="title">Title</button>
-          <button class="tab-btn" data-tab="short-desc">Short Description</button>
-          <button class="tab-btn" data-tab="description">Full Description</button>
-          <button class="tab-btn" data-tab="specs">Specifications</button>
-          <button class="tab-btn" data-tab="categories">Categories</button>
-          <button class="tab-btn" data-tab="tags">Tags</button>
+  console.log('Starting modal creation');
+  // Remove any existing modal
+  const existingModal = document.getElementById('auditModal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  // Create modal
+  const modal = document.createElement('div');
+  modal.id = 'auditModal';
+  modal.innerHTML = `
+    <div class="audit-modal">
+      <div class="audit-modal-content">
+        <span class="close">&times;</span>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="title">Titre</button>
+          <button class="tab-btn" data-tab="description">Description</button>
+          <button class="tab-btn" data-tab="analysis">Analyse Globale</button>
         </div>
-        <div id="compareContent">
-          <div id="tab-title" class="tab-content"></div>
-          <div id="tab-short-desc" class="tab-content" style="display: none;"></div>
-          <div id="tab-description" class="tab-content" style="display: none;"></div>
-          <div id="tab-specs" class="tab-content" style="display: none;"></div>
-          <div id="tab-categories" class="tab-content" style="display: none;"></div>
-          <div id="tab-tags" class="tab-content" style="display: none;"></div>
+        <div class="tab-content">
+          <div id="tab-title" class="tab-pane active">
+            <h3>Analyse du Titre</h3>
+            <div class="comparison">
+              <div class="original">
+                <h4>Titre Original</h4>
+                <div class="content original-content"></div>
+              </div>
+              <div class="suggested">
+                <h4>Titre Suggéré</h4>
+                <div class="content suggested-content"></div>
+                <div class="score"></div>
+                <div class="analysis"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-description" class="tab-pane">
+            <h3>Analyse de la Description</h3>
+            <div class="comparison">
+              <div class="original">
+                <h4>Description Originale</h4>
+                <div class="content original-content"></div>
+              </div>
+              <div class="suggested">
+                <h4>Description Suggérée</h4>
+                <div class="content suggested-content"></div>
+                <div class="score"></div>
+                <div class="analysis"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-analysis" class="tab-pane">
+            <h3>Analyse Globale</h3>
+            <div class="global-score"></div>
+            <div class="overall-analysis"></div>
+            <div class="improvements">
+              <h4>Améliorations Prioritaires</h4>
+              <ul class="improvements-list"></ul>
+            </div>
+          </div>
         </div>
       </div>
-    `;
-    document.body.appendChild(modal);
-  
-    // Add styles for the modal
-    const style = document.createElement('style');
-    style.textContent = `
-      .tab-btn {
-        padding: 8px 16px;
-        margin: 0 4px;
-        border: none;
-        background: #f0f0f0;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-      }
-      .tab-btn:hover {
-        background: #e0e0e0;
-      }
-      .tab-btn.active {
-        background: #10a37f;
-        color: white;
-      }
-      .modal-content {
-        scrollbar-width: thin;
-        scrollbar-color: #10a37f #f0f0f0;
-      }
-      .modal-content::-webkit-scrollbar {
-        width: 8px;
-      }
-      .modal-content::-webkit-scrollbar-track {
-        background: #f0f0f0;
-      }
-      .modal-content::-webkit-scrollbar-thumb {
-        background-color: #10a37f;
-        border-radius: 4px;
-      }
-    `;
-    document.head.appendChild(style);
-  
-    // Add tab switching functionality
-    const tabBtns = modal.querySelectorAll('.tab-btn');
-    const tabContents = modal.querySelectorAll('.tab-content');
-    
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.getAttribute('data-tab');
-        tabBtns.forEach(b => b.classList.remove('active'));
-        tabContents.forEach(div => div.style.display = 'none');
-        btn.classList.add('active');
-        document.getElementById('tab-' + tab).style.display = 'block';
+    </div>
+  `;
+
+  // Add styles
+  const styles = document.createElement('style');
+  styles.textContent = `
+    .audit-modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+
+    .audit-modal-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 900px;
+      border-radius: 8px;
+      position: relative;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .close {
+      position: absolute;
+      right: 20px;
+      top: 10px;
+      font-size: 28px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .close:hover {
+      color: black;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: #666;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .tab-btn:hover {
+      background-color: #f5f5f5;
+    }
+
+    .tab-btn.active {
+      color: #96588a;
+      border-bottom: 2px solid #96588a;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .original, .suggested {
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+
+    .content {
+      margin: 10px 0;
+      padding: 10px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 100px;
+    }
+
+    .suggested .content {
+      border-color: #96588a;
+    }
+
+    .score {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #96588a;
+    }
+
+    .analysis {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+
+    .global-score {
+      font-size: 24px;
+      font-weight: bold;
+      color: #96588a;
+      margin-bottom: 20px;
+    }
+
+    .improvements-list li {
+      margin-bottom: 10px;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .improvements-list li:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #96588a;
+    }
+  `;
+
+  // Add to page
+  document.body.appendChild(styles);
+  document.body.appendChild(modal);
+
+  // Add tab switching functionality
+  const tabButtons = modal.querySelectorAll('.tab-btn');
+  const tabPanes = modal.querySelectorAll('.tab-pane');
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      
+      // Update active state of buttons
+      tabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Update active state of panes
+      tabPanes.forEach(pane => {
+        if (pane.id === `tab-${target}`) {
+          pane.classList.add('active');
+        } else {
+          pane.classList.remove('active');
+        }
       });
     });
-  
-    // Close button and overlay functionality
-    const closeBtn = modal.querySelector('#closeModalBtn');
-    const overlay = modal.querySelector('.modal-overlay');
-    
-    const closeModal = () => {
-      modal.style.display = 'none';
-    };
+  });
 
-    closeBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', closeModal);
-  }
-  
+  // Add close functionality
+  const closeBtn = modal.querySelector('.close');
+  closeBtn.onclick = () => {
+    modal.querySelector('.audit-modal').style.display = 'none';
+  };
+
+  // Close on outside click
+  modal.querySelector('.audit-modal').onclick = (event) => {
+    if (event.target === modal.querySelector('.audit-modal')) {
+      modal.querySelector('.audit-modal').style.display = 'none';
+    }
+  };
+
+  return modal;
+}
+
 window.createAuditModal = createAuditModal;
   

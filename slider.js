@@ -778,10 +778,23 @@ Please analyze all aspects and return a JSON response with the following structu
 
   // Helper function to process audit results
   function processAuditResults(auditResults, btn) {
-    // Store the results
-    const productId = btn.closest('.product-card').dataset.productId;
-    console.log('Storing results for product:', productId);
-    localStorage.setItem(`audit_${productId}`, JSON.stringify(auditResults));
+                        // Store the results and product data
+                    const productId = btn.closest('.product-card').dataset.productId;
+                    console.log('Storing results for product:', productId);
+                    
+                    // Get the product data from the card
+                    const productCard = btn.closest('.product-card');
+                    const productData = {
+                      id: productId,
+                      name: productCard.querySelector('h3').textContent,
+                      description: productCard.querySelector('.product-description').textContent,
+                    };
+                    
+                    // Store both audit results and product data
+                    localStorage.setItem(`audit_${productId}`, JSON.stringify({
+                      audit: auditResults,
+                      product: productData
+                    }));
     
     // Enable the compare button
     const compareBtn = btn.closest('.product-card').querySelector('.compare-btn');
@@ -792,21 +805,54 @@ Please analyze all aspects and return a JSON response with the following structu
       // Add click handler for compare button
       compareBtn.onclick = () => {
         console.log('Compare button clicked');
-        const storedResults = JSON.parse(localStorage.getItem(`audit_${productId}`));
+        const storedData = JSON.parse(localStorage.getItem(`audit_${productId}`));
+        const storedResults = storedData.audit;
+        const product = storedData.product;
         
-        // Create simple alert with results
-        alert(`
-Résultats de l'Audit du Produit:
+        // Create and show modal
+        createAuditModal();
+        const modal = document.getElementById('auditModal');
+        
+        if (!modal) {
+          console.error('Failed to create modal');
+          return;
+        }
 
-Score du Titre: ${storedResults.titleScore}/100
-Score de la Description: ${storedResults.descriptionScore}/100
-Score Global: ${storedResults.globalScore}/100
+        // Populate title tab
+        const titleOriginal = modal.querySelector('#tab-title .original-content');
+        const titleSuggested = modal.querySelector('#tab-title .suggested-content');
+        const titleScore = modal.querySelector('#tab-title .score');
+        const titleAnalysis = modal.querySelector('#tab-title .analysis');
 
-Analyse: ${storedResults.overallAnalysis}
+        titleOriginal.textContent = product.name;
+        titleSuggested.textContent = storedResults.newTitle;
+        titleScore.textContent = `Score: ${storedResults.titleScore}/100`;
+        titleAnalysis.textContent = storedResults.titleAnalysis;
 
-Améliorations Prioritaires:
-${storedResults.priorityImprovements.join('\n')}
-        `);
+        // Populate description tab
+        const descOriginal = modal.querySelector('#tab-description .original-content');
+        const descSuggested = modal.querySelector('#tab-description .suggested-content');
+        const descScore = modal.querySelector('#tab-description .score');
+        const descAnalysis = modal.querySelector('#tab-description .analysis');
+
+        descOriginal.textContent = product.description || 'Aucune description';
+        descSuggested.textContent = storedResults.newDescription;
+        descScore.textContent = `Score: ${storedResults.descriptionScore}/100`;
+        descAnalysis.textContent = storedResults.descriptionAnalysis;
+
+        // Populate analysis tab
+        const globalScore = modal.querySelector('.global-score');
+        const overallAnalysis = modal.querySelector('.overall-analysis');
+        const improvementsList = modal.querySelector('.improvements-list');
+
+        globalScore.textContent = `Score Global: ${storedResults.globalScore}/100`;
+        overallAnalysis.textContent = storedResults.overallAnalysis;
+        improvementsList.innerHTML = storedResults.priorityImprovements
+          .map(imp => `<li>${imp}</li>`)
+          .join('');
+
+        // Show the modal
+        modal.querySelector('.audit-modal').style.display = 'block';
       };
     } else {
       console.error('Compare button not found');

@@ -16,6 +16,185 @@
   let auditResultsDiv;
   let currentAuth = null;
 
+  // Add styles for modal content
+  const modalStyles = `
+    .comparison-container {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .version-block {
+      flex: 1;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .version-block h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .version-block .score {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .content-box {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+      min-height: 100px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .suggested-content[contenteditable="true"] {
+      outline: none;
+      border: 1px solid #e0e0e0;
+      padding: 8px;
+      border-radius: 4px;
+      background: #fff;
+      min-height: 100px;
+    }
+
+    .suggested-content[contenteditable="true"]:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+
+    .apply-changes-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .apply-changes-btn:hover {
+      background: #0056b3;
+    }
+
+    .apply-changes-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .apply-changes-btn.loading {
+      background: #ccc;
+      position: relative;
+    }
+
+    .apply-changes-btn.success {
+      background: #28a745;
+    }
+
+    .apply-changes-btn.error {
+      background: #dc3545;
+    }
+
+    .analysis-section {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+
+    .analysis-section h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+
+    .analysis-section p {
+      margin: 0;
+      color: #666;
+    }
+
+    .category-tag, .tag {
+      display: inline-block;
+      padding: 4px 8px;
+      margin: 2px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .category-tag {
+      background: #e3f2fd;
+      color: #1976d2;
+      border: 1px solid #bbdefb;
+    }
+
+    .tag {
+      background: #f3e5f5;
+      color: #7b1fa2;
+      border: 1px solid #e1bee7;
+    }
+
+    .specification-item {
+      padding: 8px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .specification-item:last-child {
+      border-bottom: none;
+    }
+
+    .specification-item strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #333;
+    }
+
+    .global-analysis {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .global-analysis h3 {
+      margin: 0 0 20px 0;
+      color: #333;
+      text-align: center;
+    }
+
+    .analysis-content {
+      background: white;
+      border-radius: 6px;
+      padding: 15px;
+    }
+
+    .analysis-content h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+
+    .improvements-list {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .improvements-list li {
+      margin-bottom: 8px;
+      color: #666;
+    }
+  `;
+
+  // Add styles to the document
+  const styleElement = document.createElement('style');
+  styleElement.textContent = modalStyles;
+  document.head.appendChild(styleElement);
+
   // Function to fetch products from API
   async function fetchProducts(page = 1) {
     try {
@@ -466,120 +645,198 @@ Please analyze all aspects and return a JSON response with the following structu
       return;
     }
 
-    // Populate title tab
+    // Helper function to create a comparison block
+    function createComparisonBlock(original, suggested, score, analysis, field) {
+      return `
+        <div class="comparison-container">
+          <div class="version-block original">
+            <h4>Current Version</h4>
+            <div class="content-box">
+              <div class="original-content">${original}</div>
+            </div>
+          </div>
+          <div class="version-block suggested">
+            <h4>Enhanced Version <span class="score">(Score: ${score || 0}/100)</span></h4>
+            <div class="content-box">
+              <div class="suggested-content" contenteditable="true">${suggested}</div>
+            </div>
+            <button class="apply-changes-btn" data-field="${field}">Apply Changes</button>
+          </div>
+        </div>
+        <div class="analysis-section">
+          <h4>Analysis</h4>
+          <p>${analysis || 'No analysis available'}</p>
+        </div>
+      `;
+    }
+
+    // Helper function to format arrays as tags
+    function formatAsTags(items, className) {
+      if (!Array.isArray(items) || items.length === 0) return 'None';
+      return items.map(item => {
+        const text = typeof item === 'object' ? item.name : item;
+        return `<span class="${className}">${text}</span>`;
+      }).join(' ');
+    }
+
+    // Helper function to format specifications
+    function formatSpecifications(specs) {
+      if (!Array.isArray(specs) || specs.length === 0) return 'No specifications';
+      return specs.map(spec => `
+        <div class="specification-item">
+          <strong>${spec.name || ''}</strong>
+          <span>${Array.isArray(spec.options) ? spec.options.join(', ') : ''}</span>
+        </div>
+      `).join('');
+    }
+
+    // Update title tab
     const titleTab = modal.querySelector('#tab-title');
     if (titleTab) {
-      const titleOriginal = titleTab.querySelector('.original-content');
-      const titleSuggested = titleTab.querySelector('.suggested-content');
-      const titleScore = titleTab.querySelector('.score');
-      const titleAnalysis = titleTab.querySelector('.analysis');
-
-      if (titleOriginal) titleOriginal.textContent = product.title || 'No title';
-      if (titleSuggested) titleSuggested.textContent = auditResults.newTitle || 'No suggestion';
-      if (titleScore) titleScore.textContent = `Score: ${auditResults.titleScore || 0}/100`;
-      if (titleAnalysis) titleAnalysis.textContent = auditResults.titleAnalysis || 'No analysis available';
+      titleTab.innerHTML = createComparisonBlock(
+        product.title || 'No title',
+        auditResults.newTitle || 'No suggestion',
+        auditResults.titleScore,
+        auditResults.titleAnalysis,
+        'name' // Using 'name' as it's the field name in WooCommerce API
+      );
     }
 
-    // Populate short description tab
+    // Update short description tab
     const shortDescTab = modal.querySelector('#tab-short-description');
     if (shortDescTab) {
-      const shortDescOriginal = shortDescTab.querySelector('.original-content');
-      const shortDescSuggested = shortDescTab.querySelector('.suggested-content');
-      const shortDescScore = shortDescTab.querySelector('.score');
-      const shortDescAnalysis = shortDescTab.querySelector('.analysis');
-
-      if (shortDescOriginal) shortDescOriginal.textContent = product.shortDescription || 'No short description';
-      if (shortDescSuggested) shortDescSuggested.textContent = auditResults.newShortDescription || 'No suggestion';
-      if (shortDescScore) shortDescScore.textContent = `Score: ${auditResults.shortDescriptionScore || 0}/100`;
-      if (shortDescAnalysis) shortDescAnalysis.textContent = auditResults.shortDescriptionAnalysis || 'No analysis available';
+      shortDescTab.innerHTML = createComparisonBlock(
+        product.shortDescription || 'No short description',
+        auditResults.newShortDescription || 'No suggestion',
+        auditResults.shortDescriptionScore,
+        auditResults.shortDescriptionAnalysis,
+        'short_description' // Using 'short_description' as it's the field name in WooCommerce API
+      );
     }
 
-    // Populate description tab
+    // Update description tab
     const descTab = modal.querySelector('#tab-description');
     if (descTab) {
-      const descOriginal = descTab.querySelector('.original-content');
-      const descSuggested = descTab.querySelector('.suggested-content');
-      const descScore = descTab.querySelector('.score');
-      const descAnalysis = descTab.querySelector('.analysis');
-
-      if (descOriginal) descOriginal.textContent = product.description || 'No description';
-      if (descSuggested) descSuggested.textContent = auditResults.newDescription || 'No suggestion';
-      if (descScore) descScore.textContent = `Score: ${auditResults.descriptionScore || 0}/100`;
-      if (descAnalysis) descAnalysis.textContent = auditResults.descriptionAnalysis || 'No analysis available';
+      descTab.innerHTML = createComparisonBlock(
+        product.description || 'No description',
+        auditResults.newDescription || 'No suggestion',
+        auditResults.descriptionScore,
+        auditResults.descriptionAnalysis,
+        'description'
+      );
     }
 
-    // Populate specifications tab
+    // Update specifications tab
     const specsTab = modal.querySelector('#tab-specifications');
     if (specsTab) {
-      const specsOriginal = specsTab.querySelector('.original-content');
-      const specsSuggested = specsTab.querySelector('.suggested-content');
-      const specsScore = specsTab.querySelector('.score');
-      const specsAnalysis = specsTab.querySelector('.analysis');
-
-      if (specsOriginal) specsOriginal.textContent = (product.attributes || []).map(attr => 
-        `${attr.name || ''}: ${attr.options?.join(', ') || ''}`
-      ).join('\n') || 'No specifications';
-      
-      if (specsSuggested) specsSuggested.textContent = (auditResults.suggestedSpecs || []).join('\n') || 'No suggestions';
-      if (specsScore) specsScore.textContent = `Score: ${auditResults.specificationsScore || 0}/100`;
-      if (specsAnalysis) specsAnalysis.textContent = auditResults.specificationsAnalysis || 'No analysis available';
+      specsTab.innerHTML = createComparisonBlock(
+        formatSpecifications(product.attributes),
+        (auditResults.suggestedSpecs || []).map(spec => `<div class="specification-item">${spec}</div>`).join(''),
+        auditResults.specificationsScore,
+        auditResults.specificationsAnalysis,
+        'attributes'
+      );
     }
 
-    // Populate categories tab
+    // Update categories tab
     const categoriesTab = modal.querySelector('#tab-categories');
     if (categoriesTab) {
-      const categoriesOriginal = categoriesTab.querySelector('.original-content');
-      const categoriesSuggested = categoriesTab.querySelector('.suggested-content');
-      const categoriesScore = categoriesTab.querySelector('.score');
-      const categoriesAnalysis = categoriesTab.querySelector('.analysis');
-
-      if (categoriesOriginal) {
-        const categories = product.categories || [];
-        categoriesOriginal.textContent = categories.map(cat => 
-          typeof cat === 'object' ? cat.name : cat
-        ).join('\n') || 'No categories';
-      }
-      
-      if (categoriesSuggested) categoriesSuggested.textContent = (auditResults.suggestedCategories || []).join('\n') || 'No suggestions';
-      if (categoriesScore) categoriesScore.textContent = `Score: ${auditResults.categoriesScore || 0}/100`;
-      if (categoriesAnalysis) categoriesAnalysis.textContent = auditResults.categoriesAnalysis || 'No analysis available';
+      categoriesTab.innerHTML = createComparisonBlock(
+        formatAsTags(product.categories, 'category-tag'),
+        formatAsTags(auditResults.suggestedCategories || [], 'category-tag'),
+        auditResults.categoriesScore,
+        auditResults.categoriesAnalysis,
+        'categories'
+      );
     }
 
-    // Populate tags tab
+    // Update tags tab
     const tagsTab = modal.querySelector('#tab-tags');
     if (tagsTab) {
-      const tagsOriginal = tagsTab.querySelector('.original-content');
-      const tagsSuggested = tagsTab.querySelector('.suggested-content');
-      const tagsScore = tagsTab.querySelector('.score');
-      const tagsAnalysis = tagsTab.querySelector('.analysis');
-
-      if (tagsOriginal) {
-        const tags = product.tags || [];
-        tagsOriginal.textContent = tags.map(tag => 
-          typeof tag === 'object' ? tag.name : tag
-        ).join('\n') || 'No tags';
-      }
-      
-      if (tagsSuggested) tagsSuggested.textContent = (auditResults.suggestedTags || []).join('\n') || 'No suggestions';
-      if (tagsScore) tagsScore.textContent = `Score: ${auditResults.tagsScore || 0}/100`;
-      if (tagsAnalysis) tagsAnalysis.textContent = auditResults.tagsAnalysis || 'No analysis available';
+      tagsTab.innerHTML = createComparisonBlock(
+        formatAsTags(product.tags, 'tag'),
+        formatAsTags(auditResults.suggestedTags || [], 'tag'),
+        auditResults.tagsScore,
+        auditResults.tagsAnalysis,
+        'tags'
+      );
     }
 
-    // Populate global analysis tab
+    // Update global analysis tab
     const analysisTab = modal.querySelector('#tab-analysis');
     if (analysisTab) {
-      const globalScore = analysisTab.querySelector('.global-score');
-      const overallAnalysis = analysisTab.querySelector('.overall-analysis');
-      const improvementsList = analysisTab.querySelector('.improvements-list');
-
-      if (globalScore) globalScore.textContent = `Global Score: ${auditResults.globalScore || 0}/100`;
-      if (overallAnalysis) overallAnalysis.textContent = auditResults.overallAnalysis || 'No analysis available';
-      if (improvementsList) {
-        improvementsList.innerHTML = (auditResults.priorityImprovements || [])
-          .map(imp => `<li>${imp}</li>`)
-          .join('') || '<li>No improvements suggested</li>';
-      }
+      analysisTab.innerHTML = `
+        <div class="global-analysis">
+          <h3>Global Score: ${auditResults.globalScore || 0}/100</h3>
+          <div class="analysis-content">
+            <h4>Overall Analysis</h4>
+            <p>${auditResults.overallAnalysis || 'No analysis available'}</p>
+            <h4>Priority Improvements</h4>
+            <ul class="improvements-list">
+              ${(auditResults.priorityImprovements || [])
+                .map(imp => `<li>${imp}</li>`)
+                .join('') || '<li>No improvements suggested</li>'}
+            </ul>
+          </div>
+        </div>
+      `;
     }
+
+    // Add event listeners for apply changes buttons
+    const applyButtons = modal.querySelectorAll('.apply-changes-btn');
+    applyButtons.forEach(button => {
+      button.addEventListener('click', async () => {
+        const field = button.dataset.field;
+        const content = button.closest('.version-block').querySelector('.suggested-content').textContent.trim();
+
+        try {
+          button.disabled = true;
+          button.textContent = 'Applying...';
+          button.classList.add('loading');
+
+          const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${product.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-woo-user-id': currentAuth.userId
+            },
+            body: JSON.stringify({
+              [field]: content
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update product');
+          }
+
+          // Update the original content
+          const originalContent = button.closest('.comparison-container').querySelector('.original-content');
+          originalContent.textContent = content;
+
+          button.textContent = 'Changes Applied ✓';
+          button.classList.remove('loading');
+          button.classList.add('success');
+
+          setTimeout(() => {
+            button.textContent = 'Apply Changes';
+            button.classList.remove('success');
+            button.disabled = false;
+          }, 2000);
+
+        } catch (error) {
+          console.error('Error applying changes:', error);
+          button.textContent = 'Error - Try Again';
+          button.classList.remove('loading');
+          button.classList.add('error');
+
+          setTimeout(() => {
+            button.textContent = 'Apply Changes';
+            button.classList.remove('error');
+            button.disabled = false;
+          }, 3000);
+        }
+      });
+    });
   }
 
   // Function to attach compare button listeners

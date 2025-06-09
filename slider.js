@@ -431,7 +431,9 @@ Please analyze all aspects and return a JSON response with the following structu
   "tagsScore": number (0-100),
   "tagsAnalysis": string,
   "suggestedTags": string[],
-  "suggested 2 reviews including the title, the rating, the review, and the date": string[],
+  "suggested reviews": string[],
+  "reviews score": number (0-100),
+  "reviews analysis": string
   
 }`;
 

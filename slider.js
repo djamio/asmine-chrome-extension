@@ -210,6 +210,413 @@
     }
   }
 
+  // Function to handle ChatGPT prompt generation and response
+  async function handleGeneratePrompt(btn, product) {
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+
+    const prompt = `
+Audit the following WooCommerce product and provide a comprehensive analysis:
+
+Product Details:
+- Title: ${product.title}
+- Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
+- Full Description: ${product.description}
+- Specifications: ${JSON.stringify(product.attributes || [])}
+- Categories: ${JSON.stringify(product.categories || [])}
+- Tags: ${JSON.stringify(product.tags || [])}
+- Reviews Count: ${product.reviews_count || 0}
+
+Please analyze all aspects and return a JSON response with the following structure:
+{
+  "titleScore": number (0-100),
+  "titleAnalysis": string,
+  "newTitle": string,
+  "shortDescriptionScore": number (0-100),
+  "shortDescriptionAnalysis": string,
+  "newShortDescription": string,
+  "descriptionScore": number (0-100),
+  "descriptionAnalysis": string,
+  "newDescription": string,
+  "specificationsScore": number (0-100),
+  "specificationsAnalysis": string,
+  "suggestedSpecs": string[],
+  "categoriesScore": number (0-100),
+  "categoriesAnalysis": string,
+  "suggestedCategories": string[],
+  "tagsScore": number (0-100),
+  "tagsAnalysis": string,
+  "suggestedTags": string[],
+  "globalScore": number (0-100),
+  "overallAnalysis": string,
+  "priorityImprovements": string[]
+}`;
+
+    try {
+      // Find the contenteditable div (ChatGPT's input box)
+      const inputBox = document.querySelector('[contenteditable="true"]');
+      if (inputBox) {
+        // Focus the input box
+        inputBox.focus();
+
+        // Insert the prompt using execCommand
+        document.execCommand("insertText", false, prompt);
+
+        // Find and click the send button after a short delay
+        setTimeout(() => {
+          const sendButton = document.querySelector('[data-testid="send-button"]');
+          if (sendButton) {
+            sendButton.click();
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Error inserting prompt:', error);
+      // Fallback: try the textarea approach
+      const textarea = document.querySelector('#prompt-textarea');
+      if (textarea) {
+        textarea.value = prompt;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        textarea.focus();
+        const sendButton = document.querySelector('[data-testid="send-button"]');
+        if (sendButton) {
+          sendButton.click();
+        }
+      }
+    }
+
+    // Listen for ChatGPT response
+    let debounceTimer;
+    const observer = new MutationObserver((mutations) => {
+      console.log('MutationObserver triggered, mutations:', mutations.length);
+      
+      // Clear any existing timer
+      clearTimeout(debounceTimer);
+      
+      // Set a new timer to process the latest state
+      debounceTimer = setTimeout(() => {
+        console.log('Processing final state after mutations');
+        
+        // Try multiple selectors that might match ChatGPT's response
+        const selectors = [
+          '.markdown-content',
+          '[data-message-author-role="assistant"]',
+          '.prose',
+          '[data-testid="conversation-turn-"]'
+        ];
+        
+        let responseElement = null;
+        for (const selector of selectors) {
+          const element = document.querySelector(selector);
+          if (element) {
+            console.log('Found response element with selector:', selector);
+            responseElement = element;
+            break;
+          }
+        }
+
+        if (responseElement) {
+          try {
+            console.log('Found ChatGPT response element');
+            const responseText = responseElement.textContent;
+            console.log('Full response text:', responseText);
+
+            // If no valid JSON in code blocks, try the more general approach
+            const jsonRegex = /\{(?:[^{}]|{[^{}]*})*\}/g;
+            const matches = responseText.match(jsonRegex);
+            console.log('Found JSON matches:', matches?.length);
+            
+            if (matches) {
+              // Try each match until we find valid JSON with the expected structure
+              for (const match of matches) {
+                console.log('Trying to parse JSON match:', match);
+                try {
+                  // Clean the JSON string before parsing
+                  const cleanJson = match
+                    .replace(/[\n\r]/g, '')  // Remove line breaks
+                    .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
+                    .trim();                 // Remove leading/trailing whitespace
+                  
+                  const parsed = JSON.parse(cleanJson);
+                  console.log('Successfully parsed JSON:', parsed);
+                  
+                  // Verify this is our audit results by checking required fields
+                  if (parsed.titleScore !== undefined && 
+                      parsed.overallAnalysis !== undefined && 
+                      parsed.priorityImprovements !== undefined) {
+                    console.log('Found valid audit results JSON');
+                    processAuditResults(parsed, btn);
+                    break;
+                  } else {
+                    console.log('Found JSON but missing required fields. Available fields:', Object.keys(parsed));
+                  }
+                } catch (error) {
+                  console.log('Invalid JSON match:', error.message);
+                  console.log('Attempted to parse:', match);
+                }
+              }
+            } else {
+              console.log('No JSON matches found in response');
+            }
+          } catch (error) {
+            console.error('Error processing ChatGPT response:', error);
+          }
+        } else {
+          console.log('No response element found with any selector');
+        }
+      }, 1000); // Wait 1 second after last mutation before processing
+    });
+
+    // Start observing ChatGPT's response area
+    console.log('Setting up observer');
+    const possibleTargets = [
+      '.chat-content',
+      '[data-testid="conversation-main"]',
+      'main'
+    ];
+
+    let targetNode = null;
+    for (const selector of possibleTargets) {
+      const element = document.querySelector(selector);
+      if (element) {
+        console.log('Found target node with selector:', selector);
+        targetNode = element;
+        break;
+      }
+    }
+
+    if (targetNode) {
+      console.log('Starting observation of target node');
+      observer.observe(targetNode, { 
+        childList: true,
+        subtree: true,
+        characterData: true,
+        characterDataOldValue: true
+      });
+    } else {
+      console.error('Could not find any suitable target node for observation');
+    }
+
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = 'Generate ChatGPT Prompt';
+    }, 1000);
+  }
+
+  // Function to handle modal updates
+  function updateModalContent(modal, product, auditResults) {
+    if (!modal || !product || !auditResults) {
+      console.error('Missing required data for modal update');
+      return;
+    }
+
+    console.log('Updating modal content with:', { product, auditResults });
+
+    // Update title tab
+    const titleTab = document.getElementById('tab-title');
+    if (titleTab) {
+      titleTab.innerHTML = `
+        <div class="comparison-container">
+          <div class="version-block">
+            <h4>Original Title</h4>
+            <div class="original-content">${product.name}</div>
+          </div>
+          <div class="version-block">
+            <h4>Enhanced Title <span class="score">(Score: ${auditResults.titleScore}/100)</span></h4>
+            <div class="enhanced-content" contenteditable="true">${auditResults.newTitle}</div>
+            <button class="apply-changes-btn" data-field="name">Apply Changes</button>
+          </div>
+        </div>
+        <div class="analysis-section">
+          <p><strong>Analysis:</strong> ${auditResults.titleAnalysis}</p>
+        </div>
+      `;
+    }
+
+    // Update short description tab
+    const shortDescTab = document.getElementById('tab-short-desc');
+    if (shortDescTab) {
+      shortDescTab.innerHTML = `
+        <div class="comparison-container">
+          <div class="version-block">
+            <h4>Original Short Description</h4>
+            <div class="original-content">${product.short_description || ''}</div>
+          </div>
+          <div class="version-block">
+            <h4>Enhanced Short Description <span class="score">(Score: ${auditResults.shortDescriptionScore}/100)</span></h4>
+            <div class="enhanced-content" contenteditable="true">${auditResults.newShortDescription}</div>
+            <button class="apply-changes-btn" data-field="short_description">Apply Changes</button>
+          </div>
+        </div>
+        <div class="analysis-section">
+          <p><strong>Analysis:</strong> ${auditResults.shortDescriptionAnalysis}</p>
+        </div>
+      `;
+    }
+
+    // Update description tab
+    const descTab = document.getElementById('tab-description');
+    if (descTab) {
+      descTab.innerHTML = `
+        <div class="comparison-container">
+          <div class="version-block">
+            <h4>Original Description</h4>
+            <div class="original-content">${product.description || ''}</div>
+          </div>
+          <div class="version-block">
+            <h4>Enhanced Description <span class="score">(Score: ${auditResults.descriptionScore}/100)</span></h4>
+            <div class="enhanced-content" contenteditable="true">${auditResults.newDescription}</div>
+            <button class="apply-changes-btn" data-field="description">Apply Changes</button>
+          </div>
+        </div>
+        <div class="analysis-section">
+          <p><strong>Analysis:</strong> ${auditResults.descriptionAnalysis}</p>
+        </div>
+      `;
+    }
+
+    // Update specifications tab
+    const specsTab = document.getElementById('tab-specifications');
+    if (specsTab) {
+      specsTab.innerHTML = `
+        <div class="comparison-container">
+          <div class="version-block">
+            <h4>Current Specifications</h4>
+            <div class="original-content">
+              ${(product.attributes || []).map(attr => `
+                <p><strong>${attr.name}:</strong> ${attr.options.join(', ')}</p>
+              `).join('') || 'No specifications available'}
+            </div>
+          </div>
+          <div class="version-block">
+            <h4>Suggested Specifications <span class="score">(Score: ${auditResults.specificationsScore}/100)</span></h4>
+            <div class="enhanced-content" contenteditable="true">
+              ${auditResults.suggestedSpecs.map(spec => `<p>${spec}</p>`).join('')}
+            </div>
+            <button class="apply-changes-btn" data-field="specifications">Apply Changes</button>
+          </div>
+        </div>
+        <div class="analysis-section">
+          <p><strong>Analysis:</strong> ${auditResults.specificationsAnalysis}</p>
+        </div>
+      `;
+    }
+
+    // Update categories tab
+    const categoriesTab = document.getElementById('tab-categories');
+    if (categoriesTab) {
+      categoriesTab.innerHTML = `
+        <div class="comparison-container">
+          <div class="version-block">
+            <h4>Current Categories</h4>
+            <div class="original-content">
+              ${(product.categories || []).map(cat => `
+                <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
+              `).join('') || 'No categories assigned'}
+            </div>
+          </div>
+          <div class="version-block">
+            <h4>Suggested Categories <span class="score">(Score: ${auditResults.categoriesScore}/100)</span></h4>
+            <div class="enhanced-content" contenteditable="true">
+              ${auditResults.suggestedCategories.map(cat => `
+                <span class="category-tag">${cat}</span>
+              `).join('')}
+            </div>
+            <button class="apply-changes-btn" data-field="categories">Apply Changes</button>
+          </div>
+        </div>
+        <div class="analysis-section">
+          <p><strong>Analysis:</strong> ${auditResults.categoriesAnalysis}</p>
+        </div>
+      `;
+    }
+
+    // Update tags tab
+    const tagsTab = document.getElementById('tab-tags');
+    if (tagsTab) {
+      tagsTab.innerHTML = `
+        <div class="comparison-container">
+          <div class="version-block">
+            <h4>Current Tags</h4>
+            <div class="original-content">
+              ${(product.tags || []).map(tag => `
+                <span class="tag">${typeof tag === 'object' ? tag.name : tag}</span>
+              `).join('') || 'No tags assigned'}
+            </div>
+          </div>
+          <div class="version-block">
+            <h4>Suggested Tags <span class="score">(Score: ${auditResults.tagsScore}/100)</span></h4>
+            <div class="enhanced-content" contenteditable="true">
+              ${auditResults.suggestedTags.map(tag => `
+                <span class="tag">${tag}</span>
+              `).join('')}
+            </div>
+            <button class="apply-changes-btn" data-field="tags">Apply Changes</button>
+          </div>
+        </div>
+        <div class="analysis-section">
+          <p><strong>Analysis:</strong> ${auditResults.tagsAnalysis}</p>
+        </div>
+      `;
+    }
+
+    // Add event listeners for apply changes buttons
+    const applyButtons = modal.querySelectorAll('.apply-changes-btn');
+    applyButtons.forEach(button => {
+      button.addEventListener('click', async () => {
+        const field = button.dataset.field;
+        const content = button.closest('.version-block').querySelector('.enhanced-content').textContent;
+
+        try {
+          button.disabled = true;
+          button.textContent = 'Applying...';
+          button.classList.add('loading');
+
+          const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${product.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-woo-user-id': currentAuth.userId
+            },
+            body: JSON.stringify({
+              [field]: content
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update product');
+          }
+
+          // Update the original content
+          const originalContent = button.closest('.comparison-container').querySelector('.original-content');
+          originalContent.textContent = content;
+
+          button.textContent = 'Changes Applied ✓';
+          button.classList.remove('loading');
+          button.classList.add('success');
+
+          setTimeout(() => {
+            button.textContent = 'Apply Changes';
+            button.classList.remove('success');
+            button.disabled = false;
+          }, 2000);
+
+        } catch (error) {
+          console.error('Error applying changes:', error);
+          button.textContent = 'Error - Try Again';
+          button.classList.remove('loading');
+          button.classList.add('error');
+
+          setTimeout(() => {
+            button.textContent = 'Apply Changes';
+            button.classList.remove('error');
+            button.disabled = false;
+          }, 3000);
+        }
+      });
+    });
+  }
+
   async function renderPage() {
     console.log('Rendering page:', currentPage);
     if (!auditResultsDiv) {
@@ -242,15 +649,15 @@
           <div class="product-card" data-index="${i}" data-product-id="${p.id}">
             <div class="product-header">
               <img src="${p.images?.[0]?.src || 'https://via.placeholder.com/150'}" 
-                   alt="${p.name}"
+                   alt="${p.title}"
                    style="width: 100%; height: 150px; object-fit: contain; background: #f5f5f5;" />
               <span class="product-status">${p.status || 'Active'}</span>
             </div>
             <div class="product-info">
-              <h3>${p.name}</h3>
+              <h3>${p.title}</h3>
               <p class="product-meta">SKU: ${p.sku || 'N/A'} | Stock: ${p.stock_quantity || 0}</p>
               <p class="product-price">${p.price || '$0.00'}</p>
-              <p class="product-description">${p.short_description || p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
+              <p class="product-description">${p.shortDescription || p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
               <div class="product-tags">
                 ${(p.categories || []).map(cat => `
                   <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
@@ -290,198 +697,7 @@
     // Add event listeners for generate prompt buttons
     const buttons = auditResultsDiv.querySelectorAll('.generate-prompt-btn');
     buttons.forEach((btn, i) => {
-      btn.addEventListener('click', () => {
-        const p = products[i];
-        btn.disabled = true;
-        btn.textContent = 'Generating...';
-
-        const prompt = `
-Audit the following WooCommerce product and provide a comprehensive analysis:
-
-Product Details:
-- Title: ${p.name}
-- Short Description: ${p.short_description || p.description?.substring(0, 150) + '...'}
-- Full Description: ${p.description}
-- Specifications: ${JSON.stringify(p.attributes || [])}
-- Categories: ${JSON.stringify(p.categories || [])}
-- Tags: ${JSON.stringify(p.tags || [])}
-- Reviews Count: ${p.reviews_count || 0}
-
-Please analyze all aspects and return a JSON response with the following structure:
-{
-  "titleScore": number (0-100),
-  "titleAnalysis": string,
-  "newTitle": string,
-  "shortDescriptionScore": number (0-100),
-  "shortDescriptionAnalysis": string,
-  "newShortDescription": string,
-  "descriptionScore": number (0-100),
-  "descriptionAnalysis": string,
-  "newDescription": string,
-  "specificationsScore": number (0-100),
-  "specificationsAnalysis": string,
-  "suggestedSpecs": string[],
-  "categoriesScore": number (0-100),
-  "categoriesAnalysis": string,
-  "suggestedCategories": string[],
-  "tagsScore": number (0-100),
-  "tagsAnalysis": string,
-  "suggestedTags": string[],
-  "globalScore": number (0-100),
-  "overallAnalysis": string,
-  "priorityImprovements": string[]
-}`;
-
-        try {
-          // Find the contenteditable div (ChatGPT's input box)
-          const inputBox = document.querySelector('[contenteditable="true"]');
-          if (inputBox) {
-            // Focus the input box
-            inputBox.focus();
-
-            // Insert the prompt using execCommand
-            document.execCommand("insertText", false, prompt);
-
-            // Find and click the send button after a short delay
-            setTimeout(() => {
-              const sendButton = document.querySelector('[data-testid="send-button"]');
-              if (sendButton) {
-                sendButton.click();
-              }
-            }, 100);
-          }
-        } catch (error) {
-          console.error('Error inserting prompt:', error);
-          // Fallback: try the textarea approach
-          const textarea = document.querySelector('#prompt-textarea');
-          if (textarea) {
-            textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            textarea.focus();
-            const sendButton = document.querySelector('[data-testid="send-button"]');
-            if (sendButton) {
-              sendButton.click();
-            }
-          }
-        }
-
-        // Listen for ChatGPT response
-        let debounceTimer;
-        const observer = new MutationObserver((mutations) => {
-          console.log('MutationObserver triggered, mutations:', mutations.length);
-          
-          // Clear any existing timer
-          clearTimeout(debounceTimer);
-          
-          // Set a new timer to process the latest state
-          debounceTimer = setTimeout(() => {
-            console.log('Processing final state after mutations');
-            
-            // Try multiple selectors that might match ChatGPT's response
-            const selectors = [
-              '.markdown-content',
-              '[data-message-author-role="assistant"]',
-              '.prose',
-              '[data-testid="conversation-turn-"]'
-            ];
-            
-            let responseElement = null;
-            for (const selector of selectors) {
-              const element = document.querySelector(selector);
-              if (element) {
-                console.log('Found response element with selector:', selector);
-                responseElement = element;
-                break;
-              }
-            }
-
-            if (responseElement) {
-              try {
-                console.log('Found ChatGPT response element');
-                const responseText = responseElement.textContent;
-                console.log('Full response text:', responseText);
-                
-                // If no valid JSON in code blocks, try the more general approach
-                const jsonRegex = /\{(?:[^{}]|{[^{}]*})*\}/g;
-                const matches = responseText.match(jsonRegex);
-                console.log('Found JSON matches:', matches?.length);
-                
-                if (matches) {
-                  // Try each match until we find valid JSON with the expected structure
-                  for (const match of matches) {
-                    console.log('Trying to parse JSON match:', match);
-                    try {
-                      // Clean the JSON string before parsing
-                      const cleanJson = match
-                        .replace(/[\n\r]/g, '')  // Remove line breaks
-                        .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
-                        .trim();                 // Remove leading/trailing whitespace
-                      
-                      const parsed = JSON.parse(cleanJson);
-                      console.log('Successfully parsed JSON:', parsed);
-                      
-                      // Verify this is our audit results by checking required fields
-                      if (parsed.titleScore !== undefined && 
-                          parsed.overallAnalysis !== undefined && 
-                          parsed.priorityImprovements !== undefined) {
-                        console.log('Found valid audit results JSON');
-                        processAuditResults(parsed, btn);
-                        break;
-                      } else {
-                        console.log('Found JSON but missing required fields. Available fields:', Object.keys(parsed));
-                      }
-                    } catch (error) {
-                      console.log('Invalid JSON match:', error.message);
-                      console.log('Attempted to parse:', match);
-                    }
-                  }
-                } else {
-                  console.log('No JSON matches found in response');
-                }
-              } catch (error) {
-                console.error('Error processing ChatGPT response:', error);
-              }
-            } else {
-              console.log('No response element found with any selector');
-            }
-          }, 1000); // Wait 1 second after last mutation before processing
-        });
-
-        // Start observing ChatGPT's response area
-        console.log('Setting up observer');
-        const possibleTargets = [
-          '.chat-content',
-          '[data-testid="conversation-main"]',
-          'main'
-        ];
-
-        let targetNode = null;
-        for (const selector of possibleTargets) {
-          const element = document.querySelector(selector);
-          if (element) {
-            console.log('Found target node with selector:', selector);
-            targetNode = element;
-            break;
-          }
-        }
-
-        if (targetNode) {
-          console.log('Starting observation of target node');
-          observer.observe(targetNode, { 
-            childList: true, 
-            subtree: true,
-            characterData: true,
-            characterDataOldValue: true
-          });
-        } else {
-          console.error('Could not find any suitable target node for observation');
-        }
-
-        setTimeout(() => {
-          btn.disabled = false;
-          btn.textContent = 'Generate ChatGPT Prompt';
-        }, 1000);
-      });
+      btn.addEventListener('click', () => handleGeneratePrompt(btn, products[i]));
     });
 
     // Add event listeners for compare buttons
@@ -497,8 +713,8 @@ Please analyze all aspects and return a JSON response with the following structu
         const product = products.find(p => p.id === productId);
         if (!product) return;
 
-        const auditResults = JSON.parse(localStorage.getItem(`audit_${product.id}`));
-        if (!auditResults) {
+        const storedData = JSON.parse(localStorage.getItem(`audit_${product.id}`));
+        if (!storedData) {
           alert('No audit results available for comparison. Please generate an audit first.');
           return;
         }
@@ -506,170 +722,8 @@ Please analyze all aspects and return a JSON response with the following structu
         // Show modal
         modal.style.display = 'block';
 
-        // Update tab contents
-        document.getElementById('tab-title').innerHTML = `
-          <div class="comparison-container">
-            <div class="version-block">
-              <h4>Original Title</h4>
-              <div class="original-content">${product.name}</div>
-            </div>
-            <div class="version-block">
-              <h4>Enhanced Title <span class="score">(Score: ${auditResults.titleScore}/100)</span></h4>
-              <div class="enhanced-content" contenteditable="true">${auditResults.newTitle}</div>
-              <button class="apply-changes-btn" data-field="name">Apply Changes</button>
-            </div>
-          </div>
-          <div class="analysis-section">
-            <p><strong>Analysis:</strong> ${auditResults.titleAnalysis}</p>
-          </div>
-        `;
-
-        document.getElementById('tab-short-desc').innerHTML = `
-          <div class="comparison-container">
-            <div class="version-block">
-              <h4>Original Short Description</h4>
-              <div class="original-content">${product.short_description || ''}</div>
-            </div>
-            <div class="version-block">
-              <h4>Enhanced Short Description <span class="score">(Score: ${auditResults.shortDescriptionScore}/100)</span></h4>
-              <div class="enhanced-content" contenteditable="true">${auditResults.newShortDescription}</div>
-              <button class="apply-changes-btn" data-field="short_description">Apply Changes</button>
-            </div>
-          </div>
-          <div class="analysis-section">
-            <p><strong>Analysis:</strong> ${auditResults.shortDescriptionAnalysis}</p>
-          </div>
-        `;
-
-        document.getElementById('tab-description').innerHTML = `
-          <div class="comparison-container">
-            <div class="version-block">
-              <h4>Original Description</h4>
-              <div class="original-content">${product.description || ''}</div>
-            </div>
-            <div class="version-block">
-              <h4>Enhanced Description <span class="score">(Score: ${auditResults.descriptionScore}/100)</span></h4>
-              <div class="enhanced-content" contenteditable="true">${auditResults.newDescription}</div>
-              <button class="apply-changes-btn" data-field="description">Apply Changes</button>
-            </div>
-          </div>
-          <div class="analysis-section">
-            <p><strong>Analysis:</strong> ${auditResults.descriptionAnalysis}</p>
-          </div>
-        `;
-
-        document.getElementById('tab-specs').innerHTML = `
-          <div class="comparison-container">
-            <div class="version-block">
-              <h4>Current Specifications</h4>
-              <div class="original-content">
-                ${(product.attributes || []).map(attr => `
-                  <p><strong>${attr.name}:</strong> ${attr.options.join(', ')}</p>
-                `).join('') || 'No specifications available'}
-              </div>
-            </div>
-            <div class="version-block">
-              <h4>Suggested Specifications <span class="score">(Score: ${auditResults.specificationsScore}/100)</span></h4>
-              <div class="enhanced-content">
-                ${auditResults.suggestedSpecs.map(spec => `<p>${spec}</p>`).join('')}
-              </div>
-            </div>
-          </div>
-          <div class="analysis-section">
-            <p><strong>Analysis:</strong> ${auditResults.specificationsAnalysis}</p>
-          </div>
-        `;
-
-        document.getElementById('tab-categories').innerHTML = `
-          <div class="comparison-container">
-            <div class="version-block">
-              <h4>Current Categories</h4>
-              <div class="original-content">
-                ${(product.categories || []).map(cat => `
-                  <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
-                `).join('') || 'No categories assigned'}
-              </div>
-            </div>
-            <div class="version-block">
-              <h4>Suggested Categories <span class="score">(Score: ${auditResults.categoriesScore}/100)</span></h4>
-              <div class="enhanced-content">
-                ${auditResults.suggestedCategories.map(cat => `
-                  <span class="category-tag">${cat}</span>
-                `).join('')}
-              </div>
-            </div>
-          </div>
-          <div class="analysis-section">
-            <p><strong>Analysis:</strong> ${auditResults.categoriesAnalysis}</p>
-          </div>
-        `;
-
-        document.getElementById('tab-tags').innerHTML = `
-          <div class="comparison-container">
-            <div class="version-block">
-              <h4>Current Tags</h4>
-              <div class="original-content">
-                ${(product.tags || []).map(tag => `
-                  <span class="tag">${typeof tag === 'object' ? tag.name : tag}</span>
-                `).join('') || 'No tags assigned'}
-              </div>
-            </div>
-            <div class="version-block">
-              <h4>Suggested Tags <span class="score">(Score: ${auditResults.tagsScore}/100)</span></h4>
-              <div class="enhanced-content">
-                ${auditResults.suggestedTags.map(tag => `
-                  <span class="tag">${tag}</span>
-                `).join('')}
-              </div>
-            </div>
-          </div>
-          <div class="analysis-section">
-            <p><strong>Analysis:</strong> ${auditResults.tagsAnalysis}</p>
-          </div>
-        `;
-
-        // Add event listeners for apply changes buttons
-        modal.querySelectorAll('.apply-changes-btn').forEach(applyBtn => {
-          applyBtn.addEventListener('click', async () => {
-            const field = applyBtn.dataset.field;
-            const newContent = applyBtn.parentElement.querySelector('.enhanced-content').textContent;
-            
-            try {
-              applyBtn.disabled = true;
-              applyBtn.textContent = 'Applying...';
-              
-              // Update the product via WooCommerce API
-              const response = await fetch(`${apiBaseUrl}/products/${product.id}`, {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-woo-user-id': localStorage.getItem('user_id')
-                },
-                body: JSON.stringify({
-                  [field]: newContent
-                })
-              });
-
-              if (!response.ok) throw new Error('Failed to update product');
-              
-              applyBtn.textContent = 'Applied!';
-              setTimeout(() => {
-                applyBtn.textContent = 'Apply Changes';
-                applyBtn.disabled = false;
-              }, 2000);
-
-              // Refresh the product display
-              renderPage();
-            } catch (error) {
-              console.error('Error applying changes:', error);
-              applyBtn.textContent = 'Error';
-              setTimeout(() => {
-                applyBtn.textContent = 'Apply Changes';
-                applyBtn.disabled = false;
-              }, 2000);
-            }
-          });
-        });
+        // Update modal content
+        updateModalContent(modal, product, storedData.audit);
       });
     });
   }
@@ -778,24 +832,24 @@ Please analyze all aspects and return a JSON response with the following structu
 
   // Helper function to process audit results
   function processAuditResults(auditResults, btn) {
-                        // Store the results and product data
-                    const productId = btn.closest('.product-card').dataset.productId;
-                    console.log('Storing results for product:', productId);
-                    
-                    // Get the product data from the card
-                    const productCard = btn.closest('.product-card');
-                    const productData = {
-                      id: productId,
-                      name: productCard.querySelector('h3').textContent,
-                      description: productCard.querySelector('.product-description').textContent,
-                    };
-                    
-                    // Store both audit results and product data
-                    localStorage.setItem(`audit_${productId}`, JSON.stringify({
-                      audit: auditResults,
-                      product: productData
-                    }));
+    // Store the results and product data
+    const productId = btn.closest('.product-card').dataset.productId;
+    console.log('Storing results for product:', productId);
     
+    // Get the product data from the card
+    const productCard = btn.closest('.product-card');
+    const productData = {
+      id: productId,
+      name: productCard.querySelector('h3').textContent,
+      description: productCard.querySelector('.product-description').textContent,
+    };
+    
+    // Store both audit results and product data
+    localStorage.setItem(`audit_${productId}`, JSON.stringify({
+      audit: auditResults,
+      product: productData
+    }));
+
     // Enable the compare button
     const compareBtn = btn.closest('.product-card').querySelector('.compare-btn');
     if (compareBtn) {
@@ -876,9 +930,5 @@ Please analyze all aspects and return a JSON response with the following structu
         </div>
       `;
     }
-
-    // Stop observing
-    console.log('Disconnecting observer');
-    observer.disconnect();
   }
 })();

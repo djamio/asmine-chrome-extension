@@ -366,55 +366,115 @@ Please analyze all aspects and return a JSON response with the following structu
         }
 
         // Listen for ChatGPT response
+        let debounceTimer;
         const observer = new MutationObserver((mutations) => {
-          for (const mutation of mutations) {
-            if (mutation.addedNodes.length) {
-              const responseElement = document.querySelector('.markdown-content');
-              if (responseElement) {
-                try {
-                  const responseText = responseElement.textContent;
-                  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                  if (jsonMatch) {
-                    const auditResults = JSON.parse(jsonMatch[0]);
-                    
-                    // Store the results
-                    localStorage.setItem(`audit_${p.id}`, JSON.stringify(auditResults));
-                    
-                    // Enable the compare button
-                    const compareBtn = btn.parentElement.querySelector('.compare-btn');
-                    compareBtn.disabled = false;
-
-                    // Display the results summary
-                    const resultsDiv = btn.closest('.product-card').querySelector('.audit-results');
-                    resultsDiv.innerHTML = `
-                      <div class="audit-summary">
-                        <h4>Audit Results</h4>
-                        <p><strong>Global Score:</strong> ${auditResults.globalScore}/100</p>
-                        <p><strong>Analysis:</strong> ${auditResults.overallAnalysis}</p>
-                        <div class="priority-improvements">
-                          <h5>Priority Improvements:</h5>
-                          <ul>
-                            ${auditResults.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
-                          </ul>
-                        </div>
-                      </div>
-                    `;
-
-                    // Stop observing
-                    observer.disconnect();
-                  }
-                } catch (error) {
-                  console.error('Error parsing ChatGPT response:', error);
-                }
+          console.log('MutationObserver triggered, mutations:', mutations.length);
+          
+          // Clear any existing timer
+          clearTimeout(debounceTimer);
+          
+          // Set a new timer to process the latest state
+          debounceTimer = setTimeout(() => {
+            console.log('Processing final state after mutations');
+            
+            // Try multiple selectors that might match ChatGPT's response
+            const selectors = [
+              '.markdown-content',
+              '[data-message-author-role="assistant"]',
+              '.prose',
+              '[data-testid="conversation-turn-"]'
+            ];
+            
+            let responseElement = null;
+            for (const selector of selectors) {
+              const element = document.querySelector(selector);
+              if (element) {
+                console.log('Found response element with selector:', selector);
+                responseElement = element;
+                break;
               }
             }
-          }
+
+            if (responseElement) {
+              try {
+                console.log('Found ChatGPT response element');
+                const responseText = responseElement.textContent;
+                console.log('Full response text:', responseText);
+                
+                // If no valid JSON in code blocks, try the more general approach
+                const jsonRegex = /\{(?:[^{}]|{[^{}]*})*\}/g;
+                const matches = responseText.match(jsonRegex);
+                console.log('Found JSON matches:', matches?.length);
+                
+                if (matches) {
+                  // Try each match until we find valid JSON with the expected structure
+                  for (const match of matches) {
+                    console.log('Trying to parse JSON match:', match);
+                    try {
+                      // Clean the JSON string before parsing
+                      const cleanJson = match
+                        .replace(/[\n\r]/g, '')  // Remove line breaks
+                        .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
+                        .trim();                 // Remove leading/trailing whitespace
+                      
+                      const parsed = JSON.parse(cleanJson);
+                      console.log('Successfully parsed JSON:', parsed);
+                      
+                      // Verify this is our audit results by checking required fields
+                      if (parsed.titleScore !== undefined && 
+                          parsed.overallAnalysis !== undefined && 
+                          parsed.priorityImprovements !== undefined) {
+                        console.log('Found valid audit results JSON');
+                        processAuditResults(parsed, btn);
+                        break;
+                      } else {
+                        console.log('Found JSON but missing required fields. Available fields:', Object.keys(parsed));
+                      }
+                    } catch (error) {
+                      console.log('Invalid JSON match:', error.message);
+                      console.log('Attempted to parse:', match);
+                    }
+                  }
+                } else {
+                  console.log('No JSON matches found in response');
+                }
+              } catch (error) {
+                console.error('Error processing ChatGPT response:', error);
+              }
+            } else {
+              console.log('No response element found with any selector');
+            }
+          }, 1000); // Wait 1 second after last mutation before processing
         });
 
         // Start observing ChatGPT's response area
-        const targetNode = document.querySelector('.chat-content');
+        console.log('Setting up observer');
+        const possibleTargets = [
+          '.chat-content',
+          '[data-testid="conversation-main"]',
+          'main'
+        ];
+
+        let targetNode = null;
+        for (const selector of possibleTargets) {
+          const element = document.querySelector(selector);
+          if (element) {
+            console.log('Found target node with selector:', selector);
+            targetNode = element;
+            break;
+          }
+        }
+
         if (targetNode) {
-          observer.observe(targetNode, { childList: true, subtree: true });
+          console.log('Starting observation of target node');
+          observer.observe(targetNode, { 
+            childList: true, 
+            subtree: true,
+            characterData: true,
+            characterDataOldValue: true
+          });
+        } else {
+          console.error('Could not find any suitable target node for observation');
         }
 
         setTimeout(() => {
@@ -714,5 +774,65 @@ Please analyze all aspects and return a JSON response with the following structu
         });
       })
       .catch(error => console.error('Error injecting slider:', error));
+  }
+
+  // Helper function to process audit results
+  function processAuditResults(auditResults, btn) {
+    // Store the results
+    const productId = btn.closest('.product-card').dataset.productId;
+    console.log('Storing results for product:', productId);
+    localStorage.setItem(`audit_${productId}`, JSON.stringify(auditResults));
+    
+    // Enable the compare button
+    const compareBtn = btn.closest('.product-card').querySelector('.compare-btn');
+    if (compareBtn) {
+      console.log('Found compare button, enabling it');
+      compareBtn.disabled = false;
+      
+      // Add click handler for compare button
+      compareBtn.onclick = () => {
+        console.log('Compare button clicked');
+        const storedResults = JSON.parse(localStorage.getItem(`audit_${productId}`));
+        
+        // Create simple alert with results
+        alert(`
+Résultats de l'Audit du Produit:
+
+Score du Titre: ${storedResults.titleScore}/100
+Score de la Description: ${storedResults.descriptionScore}/100
+Score Global: ${storedResults.globalScore}/100
+
+Analyse: ${storedResults.overallAnalysis}
+
+Améliorations Prioritaires:
+${storedResults.priorityImprovements.join('\n')}
+        `);
+      };
+    } else {
+      console.error('Compare button not found');
+    }
+
+    // Display the results summary
+    const resultsDiv = btn.closest('.product-card').querySelector('.audit-results');
+    if (resultsDiv) {
+      console.log('Displaying results summary');
+      resultsDiv.innerHTML = `
+        <div class="audit-summary">
+          <h4>Audit Results</h4>
+          <p><strong>Global Score:</strong> ${auditResults.globalScore}/100</p>
+          <p><strong>Analysis:</strong> ${auditResults.overallAnalysis}</p>
+          <div class="priority-improvements">
+            <h5>Priority Improvements:</h5>
+            <ul>
+              ${auditResults.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+
+    // Stop observing
+    console.log('Disconnecting observer');
+    observer.disconnect();
   }
 })();

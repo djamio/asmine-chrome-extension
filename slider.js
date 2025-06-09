@@ -676,11 +676,18 @@ Please analyze all aspects and return a JSON response with the following structu
 
     // Helper function to format arrays as tags
     function formatAsTags(items, className) {
-      if (!Array.isArray(items) || items.length === 0) return 'None';
+      console.log(`Formatting ${className}:`, items);
+      
+      if (!Array.isArray(items) || items.length === 0) {
+        console.log(`No ${className} to format`);
+        return 'None';
+      }
+      
       return items.map(item => {
+        console.log('Processing item:', item);
         const text = typeof item === 'object' ? item.name : item;
-        return `<span class="${className}">${text}</span>`;
-      }).join(' ');
+        return text;
+      }).join(', ');
     }
 
     // Helper function to format specifications
@@ -781,9 +788,23 @@ Please analyze all aspects and return a JSON response with the following structu
     // Update categories tab
     const categoriesTab = modal.querySelector('#tab-categories');
     if (categoriesTab) {
+      console.log('Current product categories:', product.categories);
+      console.log('Suggested categories:', auditResults.suggestedCategories);
+      
+      const currentCategories = formatAsTags(product.categories, 'category-tag');
+      console.log('Formatted current categories:', currentCategories);
+      
+      let suggestedCategories;
+      if (Array.isArray(auditResults.suggestedCategories)) {
+        suggestedCategories = formatAsTags(auditResults.suggestedCategories, 'category-tag');
+      } else {
+        suggestedCategories = 'No suggestions';
+      }
+      console.log('Formatted suggested categories:', suggestedCategories);
+
       categoriesTab.innerHTML = createComparisonBlock(
-        formatAsTags(product.categories, 'category-tag'),
-        formatAsTags(auditResults.suggestedCategories || [], 'category-tag'),
+        currentCategories,
+        suggestedCategories,
         auditResults.categoriesScore,
         auditResults.categoriesAnalysis,
         'categories'
@@ -793,9 +814,23 @@ Please analyze all aspects and return a JSON response with the following structu
     // Update tags tab
     const tagsTab = modal.querySelector('#tab-tags');
     if (tagsTab) {
+      console.log('Current product tags:', product.tags);
+      console.log('Suggested tags:', auditResults.suggestedTags);
+      
+      const currentTags = formatAsTags(product.tags, 'tag');
+      console.log('Formatted current tags:', currentTags);
+      
+      let suggestedTags;
+      if (Array.isArray(auditResults.suggestedTags)) {
+        suggestedTags = formatAsTags(auditResults.suggestedTags, 'tag');
+      } else {
+        suggestedTags = 'No suggestions';
+      }
+      console.log('Formatted suggested tags:', suggestedTags);
+
       tagsTab.innerHTML = createComparisonBlock(
-        formatAsTags(product.tags, 'tag'),
-        formatAsTags(auditResults.suggestedTags || [], 'tag'),
+        currentTags,
+        suggestedTags,
         auditResults.tagsScore,
         auditResults.tagsAnalysis,
         'tags'
@@ -1182,26 +1217,58 @@ Please analyze all aspects and return a JSON response with the following structu
         }
       case 'categories':
         try {
-          const categoryTags = content.match(/<span class="category-tag">(.*?)<\/span>/g) || [];
-          const categories = categoryTags.map(tag => {
-            const name = tag.match(/<span class="category-tag">(.*?)<\/span>/)[1];
-            return { name };
-          });
+          console.log('Raw content for categories:', content);
+          
+          if (!content || content === 'None') {
+            console.log('Empty or invalid categories');
+            return { categories: [] };
+          }
+
+          // Split by commas and clean up
+          const categoryNames = content.split(',')
+            .map(cat => cat.trim())
+            .filter(cat => cat);
+            
+          console.log('Parsed category names:', categoryNames);
+
+          const categories = categoryNames.map(name => ({
+            name: name
+          }));
+
+          console.log('Final formatted categories:', categories);
           return { categories };
         } catch (e) {
           console.error('Error parsing categories:', e);
+          console.error('Error details:', e.message);
+          console.error('Error stack:', e.stack);
           return { categories: [] };
         }
       case 'tags':
         try {
-          const tagSpans = content.match(/<span class="tag">(.*?)<\/span>/g) || [];
-          const tags = tagSpans.map(tag => {
-            const name = tag.match(/<span class="tag">(.*?)<\/span>/)[1];
-            return { name };
-          });
+          console.log('Raw content for tags:', content);
+          
+          if (!content || content === 'None') {
+            console.log('Empty or invalid tags');
+            return { tags: [] };
+          }
+
+          // Split by commas and clean up
+          const tagNames = content.split(',')
+            .map(tag => tag.trim())
+            .filter(tag => tag);
+            
+          console.log('Parsed tag names:', tagNames);
+
+          const tags = tagNames.map(name => ({
+            name: name
+          }));
+
+          console.log('Final formatted tags:', tags);
           return { tags };
         } catch (e) {
           console.error('Error parsing tags:', e);
+          console.error('Error details:', e.message);
+          console.error('Error stack:', e.stack);
           return { tags: [] };
         }
       default:

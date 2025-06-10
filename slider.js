@@ -199,14 +199,15 @@
   async function fetchProducts(page = 1) {
     try {
       console.log('Fetching products for page:', page);
-      // Check if authorized with WooCommerce first
-      const auth = JSON.parse(localStorage.getItem('wooAuth'));
-      console.log('Auth state:', auth);
       
-      // Store current auth state
-      currentAuth = auth.wooAuth;
-      
-      if (!auth.wooAuth?.isConnected || !auth.wooAuth?.userId) {
+      // Get WooAuth instance
+      const wooAuth = window.wooAuth;
+      if (!wooAuth) {
+        throw new Error('WooCommerce authentication not initialized');
+      }
+
+      // Check if we have valid credentials
+      if (!wooAuth.hasValidCredentials()) {
         console.log('Not authenticated, showing connect message');
         auditResultsDiv.innerHTML = `
           <div style="text-align: center; padding: 20px;">
@@ -224,97 +225,54 @@
           }
         });
         
-      return null;
-  }
+        return null;
+      }
 
       // Add loading state
-    auditResultsDiv.innerHTML = `
-      <div style="text-align: center; padding: 20px;">
-        <div class="spinner" style="display: inline-block;">
-          <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <circle class="spinner" cx="12" cy="12" r="10" fill="none" stroke="#96588a" stroke-width="2"/>
-          </svg>
+      auditResultsDiv.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+          <div class="spinner" style="display: inline-block;">
+            <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <circle class="spinner" cx="12" cy="12" r="10" fill="none" stroke="#96588a" stroke-width="2"/>
+            </svg>
+          </div>
+            <p>Loading WooCommerce products...</p>
         </div>
-          <p>Loading WooCommerce products...</p>
-      </div>
-    `;
+      `;
 
-      console.log('Making API request with userId:', auth.wooAuth.userId);
-      const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products?page=${page}`, {
+      // Get stored credentials
+      const credentials = wooAuth.getStoredCredentials();
+      
+      console.log('Making API request with stored credentials');
+      const response = await fetch(`${wooAuth.API_URL}/woo/products?page=${page}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'x-woo-user-id': auth.wooAuth.userId
+          'x-woo-store-url': credentials.storeUrl,
+          'x-woo-consumer-key': credentials.consumerKey,
+          'x-woo-consumer-secret': credentials.consumerSecret
         }
       });
 
-      console.log('API response status:', response.status);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        console.error('API error:', errorData);
+        // If authentication fails, clear credentials and show connect message
         if (response.status === 401 || response.status === 403) {
-          // Clear auth state and show connect button
-          currentAuth = null;
-          localStorage.setItem('wooAuth', JSON.stringify({ isConnected: false, userId: null }));
+          await wooAuth.resetAuth();
           throw new Error('Authentication failed. Please reconnect to WooCommerce.');
         }
-        throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch products');
       }
 
       const data = await response.json();
-      console.log('API response data:', data);
-      
-      if (!data.success) {
-        console.error('API response indicates failure:', data.error);
-        throw new Error(data.error || 'API response indicates failure');
-      }
-
-      // Return pagination data along with products
-      const result = {
-        products: data.products || [],
-        totalProducts: data.totalProducts || data.products?.length || 0,
-        totalPages: data.totalPages || Math.ceil((data.totalProducts || data.products?.length) / 10),
-        itemsPerPage: data.itemsPerPage || 10
-      };
-      console.log('Processed API response:', result);
-      return result;
+      return data;
     } catch (error) {
-      console.error('Error in fetchProducts:', error);
-      
-      // Check if the error is due to authentication
-      if (error.message.includes('401') || error.message.includes('403') || error.message.includes('authentication')) {
-        // Clear auth state and show connect button
-        currentAuth = null;
-        localStorage.setItem('wooAuth', JSON.stringify({ isConnected: false, userId: null }));
-    auditResultsDiv.innerHTML = `
-          <div style="text-align: center; padding: 20px;">
-            <p>Your WooCommerce connection has expired. Please reconnect.</p>
-            <button id="goToWooAuth" class="btn btn-primary">Go to WooCommerce Connection</button>
-      </div>
-    `;
-
-        // Add click handler for the auth button
-        document.getElementById('goToWooAuth')?.addEventListener('click', () => {
-          const wooAuthTab = document.querySelector('[data-tab="connect"]');
-          if (wooAuthTab) {
-            wooAuthTab.click();
-          }
-        });
-      } else {
-        // Show general error with retry button
-        auditResultsDiv.innerHTML = `
-          <div style="text-align: center; padding: 20px;">
-            <h3>Error Loading WooCommerce Products</h3>
-            <p>${error.message}</p>
-            <button id="retryWooProducts" class="btn btn-secondary">Retry</button>
-          </div>
-        `;
-        
-        // Add retry handler
-        document.getElementById('retryWooProducts')?.addEventListener('click', () => {
-        renderPage();
-        });
-      }
+      console.error('Error fetching products:', error);
+      auditResultsDiv.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+          <p style="color: #dc3545;">Error loading products: ${error.message}</p>
+          <button onclick="window.location.reload()" class="btn btn-primary">Retry</button>
+        </div>
+      `;
       return null;
     }
   }
@@ -1421,5 +1379,19 @@ generate two reviews, and no nested categories or tags.
       console.error('Error updating reviews:', error);
       throw error;
     }
+  }
+
+  // Make sure WooAuth is initialized before trying to use it
+  function initializeWooAuth() {
+    if (!window.wooAuth) {
+      window.wooAuth = new WooAuth();
+    }
+  }
+
+  // Initialize WooAuth when the document is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeWooAuth);
+  } else {
+    initializeWooAuth();
   }
 })();

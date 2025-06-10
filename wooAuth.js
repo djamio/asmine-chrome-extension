@@ -39,20 +39,13 @@ class WooAuth {
   async init() {
     console.log('Initializing WooAuth');
     try {
-      // Check if we have stored auth data
-    const auth = JSON.parse(localStorage.getItem('wooAuth'));
-      console.log('Stored auth data:', auth);
-
-      if (auth.wooAuth?.isConnected && auth.wooAuth?.userId && auth.wooAuth?.storeUrl) {
+      if (this.hasValidCredentials()) {
         console.log('Found stored credentials');
-        // Verify the stored credentials are still valid
-        const status = await this.checkAuthStatus(auth.wooAuth.userId);
-        if (status.success) {
-          await this.updateUI(true, auth.wooAuth.storeUrl);
+        const credentials = this.getStoredCredentials();
+        if (credentials?.storeUrl) {
+          await this.updateUI(true, credentials.storeUrl);
           return;
         }
-        // If verification fails, clear stored data and show connect form
-        await this.resetAuth(false);
       }
       
       console.log('No valid connection found');
@@ -74,31 +67,22 @@ class WooAuth {
 
   async generateUserId() {
     // Get or create a unique ID for this extension installation
-    const stored = localStorage.getItem('extensionId');
-    if (stored.extensionId) {
-      return stored.extensionId;
+    try {
+      const stored = localStorage.getItem('extensionId');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.extensionId) {
+          return parsed.extensionId;
+        }
+      }
+      
+      const newId = 'ext_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+      localStorage.setItem('extensionId', JSON.stringify({ extensionId: newId }));
+      return newId;
+    } catch (error) {
+      console.error('Error generating userId:', error);
+      return null;
     }
-    
-    const newId = 'ext_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-    localStorage.setItem('extensionId', JSON.stringify({ extensionId: newId }));
-    return newId;
-  }
-
-  buildAuthUrl(shopUrl, userId) {
-    // Remove trailing slash if present
-    const baseUrl = shopUrl.replace(/\/$/, '');
-    
-    // Construct the authorization URL with required parameters
-    const params = new URLSearchParams({
-      app_name: encodeURIComponent(this.APP_NAME),
-      scope: 'read_write',
-      user_id: userId,
-      return_url: encodeURIComponent(chrome.runtime.getURL('return.html')),
-      callback_url: encodeURIComponent(this.CALLBACK_URL)
-    });
-
-    // Use the correct WooCommerce REST API authorization endpoint
-    return `${baseUrl}/wc-auth/v1/authorize?${params.toString()}`;
   }
 
   async authorize() {
@@ -121,20 +105,23 @@ class WooAuth {
       this.showLoadingState();
       this.updateLoadingMessage('Initiating connection...', 'info');
 
-      // Get or generate the extension ID
+      // Generate a userId for initial authorization
       const userId = await this.generateUserId();
+      if (!userId) {
+        throw new Error('Failed to generate user ID');
+      }
 
-
-    localStorage.setItem('wooAuth', JSON.stringify({
+      // Store temporary data
+      localStorage.setItem('wooAuth', JSON.stringify({
         wooAuth: {
-          shopUrl: shopUrl,
+          storeUrl: shopUrl,
           userId: userId,
           isConnected: false,
           timestamp: Date.now()
         }
       }));
 
-      // Build the authorization URL with the correct parameters
+      // Build the authorization URL with userId
       const authUrl = this.buildAuthUrl(shopUrl, userId);
       console.log('Authorization URL:', authUrl);
 
@@ -156,43 +143,69 @@ class WooAuth {
     }
   }
 
-  async checkAuthStatus(userId) {
+  buildAuthUrl(shopUrl, userId) {
+    // Remove trailing slash if present
+    const baseUrl = shopUrl.replace(/\/$/, '');
+    
+    // Construct the authorization URL with required parameters
+    const params = new URLSearchParams({
+      app_name: encodeURIComponent(this.APP_NAME),
+      scope: 'read_write',
+      user_id: userId,
+      return_url: encodeURIComponent(chrome.runtime.getURL('return.html')),
+      callback_url: encodeURIComponent(this.CALLBACK_URL)
+    });
+
+    return `${baseUrl}/wc-auth/v1/authorize?${params.toString()}`;
+  }
+
+  async checkAuthStatus(userId = null) {
     try {
+      // If userId is provided, we're in the initial authorization flow
+      if (userId) {
+        const response = await fetch(`${this.API_URL}/woo/auth-status`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-woo-user-id': userId
+          }
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to check authorization status');
+        }
+
+        if (data.success && data.isAuthenticated) {
+          // Store the new credentials if provided
+          if (data.consumerKey && data.consumerSecret) {
+            this.storeCredentials(data.store_url, data.consumerKey, data.consumerSecret);
+          }
+          return { success: true, store_url: data.store_url };
+        }
+        return { success: false };
+      }
+
+      // For subsequent checks, use stored credentials
+      const credentials = this.getStoredCredentials();
+      if (!credentials) {
+        return { success: false };
+      }
+
       const response = await fetch(`${this.API_URL}/woo/auth-status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'x-woo-user-id': userId
+          'x-woo-store-url': credentials.storeUrl,
+          'x-woo-consumer-key': credentials.consumerKey,
+          'x-woo-consumer-secret': credentials.consumerSecret
         }
       });
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to check authorization status');
-      }
-
-      // Check if we have a successful authentication
-      if (data.success && data.isAuthenticated) {
-       
-
-        localStorage.setItem('wooAuth', JSON.stringify({
-          wooAuth: {
-            isConnected: true,
-            userId: userId,
-            storeUrl: data.store_url,
-            timestamp: Date.now()
-          }
-        }));
-
-        return {
-          success: true,
-          store_url: data.store_url
-        };
-      }
-
-      // If not authenticated but no error, return success: false
       return {
-        success: false
+        success: response.ok && data.success && data.isAuthenticated,
+        store_url: data.store_url
       };
 
     } catch (error) {
@@ -203,55 +216,64 @@ class WooAuth {
     }
   }
 
-  async startStatusPolling(userId) {
-    let attempts = 0;
-    const maxAttempts = 6; // Poll for 30 seconds (6 attempts * 5 seconds interval)
-    const interval = 5000; // Poll every 5 seconds
-
-    const poll = async () => {
-      if (attempts >= maxAttempts) {
-        this.hideLoadingState();
-        this.showError('Connection timed out. Please check your shop URL and try again.');
-        return;
+  // Store credentials in localStorage
+  storeCredentials(storeUrl, consumerKey, consumerSecret) {
+    localStorage.setItem('wooAuth', JSON.stringify({
+      wooAuth: {
+        isConnected: true,
+        storeUrl: storeUrl,
+        consumerKey: consumerKey,
+        consumerSecret: consumerSecret,
+        timestamp: Date.now()
       }
+    }));
+  }
 
-      try {
-        console.log(`Polling attempt ${attempts + 1}/${maxAttempts}`);
-        const status = await this.checkAuthStatus(userId);
-        console.log('Poll status:', status);
-        
-        if (status.error) {
-          this.hideLoadingState();
-          this.showError(status.error || 'Failed to connect to WooCommerce. Please try again.');
-          return;
-        }
-
-        // Check if authorization is successful
-        if (status.success) {
-          this.updateLoadingMessage('Connection successful! Setting up your store...', 'success');
-          
-          // Hide loading state and update UI after a short delay
-          setTimeout(async () => {
-            this.hideLoadingState();
-            await this.updateUI(true, status.store_url);
-          }, 1000);
-          return;
-        } else {
-          const remainingTime = (maxAttempts - attempts) * (interval / 1000);
-          this.updateLoadingState(remainingTime);
-        }
-      } catch (error) {
-        console.error('Polling error:', error);
-        this.hideLoadingState();
-        this.showError('Failed to connect to WooCommerce. Please check your connection and try again.');
-        return;
+  async resetAuth(showUI = true) {
+    try {
+      // Clear all auth data
+      localStorage.removeItem('wooAuth');
+      if (showUI) {
+        await this.updateUI(false);
       }
+    } catch (error) {
+      console.error('Reset auth error:', error);
+      this.showError('Failed to reset authentication. Please try again.');
+    }
+  }
 
-      attempts++;
-      setTimeout(poll, interval);
-    };
+  // Check if we have valid credentials
+  hasValidCredentials() {
+    try {
+      const auth = JSON.parse(localStorage.getItem('wooAuth'));
+      return auth?.wooAuth?.isConnected && 
+             auth?.wooAuth?.consumerKey && 
+             auth?.wooAuth?.consumerSecret && 
+             auth?.wooAuth?.storeUrl;
+    } catch (error) {
+      console.error('Error checking credentials:', error);
+      return false;
+    }
+  }
 
-    poll();
+  // Get stored credentials
+  getStoredCredentials() {
+    try {
+      const auth = JSON.parse(localStorage.getItem('wooAuth'));
+      if (auth?.wooAuth?.isConnected && 
+          auth?.wooAuth?.consumerKey && 
+          auth?.wooAuth?.consumerSecret) {
+        return {
+          consumerKey: auth.wooAuth.consumerKey,
+          consumerSecret: auth.wooAuth.consumerSecret,
+          storeUrl: auth.wooAuth.storeUrl
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting stored credentials:', error);
+      return null;
+    }
   }
 
   updateLoadingState(remainingSeconds) {
@@ -292,18 +314,6 @@ class WooAuth {
     if (progressText) {
       progressText.textContent = message;
       progressText.className = `progress-text ${type}`;
-    }
-  }
-
-  async resetAuth(showUI = true) {
-    try {
-    localStorage.removeItem('wooAuth');
-      if (showUI) {
-        await this.updateUI(false);
-      }
-    } catch (error) {
-      console.error('Reset auth error:', error);
-      this.showError('Failed to reset authentication. Please try again.');
     }
   }
 
@@ -500,6 +510,57 @@ class WooAuth {
       }
       authForm.appendChild(errorContainer);
     }
+  }
+
+  async startStatusPolling(userId) {
+    let attempts = 0;
+    const maxAttempts = 6; // Poll for 30 seconds (6 attempts * 5 seconds interval)
+    const interval = 5000; // Poll every 5 seconds
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        this.hideLoadingState();
+        this.showError('Connection timed out. Please check your shop URL and try again.');
+        return;
+      }
+
+      try {
+        console.log(`Polling attempt ${attempts + 1}/${maxAttempts}`);
+        const status = await this.checkAuthStatus(userId);
+        console.log('Poll status:', status);
+        
+        if (status.error) {
+          this.hideLoadingState();
+          this.showError(status.error || 'Failed to connect to WooCommerce. Please try again.');
+          return;
+        }
+
+        // Check if authorization is successful
+        if (status.success) {
+          this.updateLoadingMessage('Connection successful! Setting up your store...', 'success');
+          
+          // Hide loading state and update UI after a short delay
+          setTimeout(async () => {
+            this.hideLoadingState();
+            await this.updateUI(true, status.store_url);
+          }, 1000);
+          return;
+        } else {
+          const remainingTime = (maxAttempts - attempts) * (interval / 1000);
+          this.updateLoadingState(remainingTime);
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+        this.hideLoadingState();
+        this.showError('Failed to connect to WooCommerce. Please check your connection and try again.');
+        return;
+      }
+
+      attempts++;
+      setTimeout(poll, interval);
+    };
+
+    poll();
   }
 }
 

@@ -22,13 +22,13 @@
   "web_accessible_resources": [
     {
       "resources": ["slider.html", "styles.css", "return.html"],
-      "matches": ["https://www.chatgpt.com/*"]
+      "matches": ["<all_urls>"]
     }
   ],
   
   "content_scripts": [
     {
-      "matches": ["https://www.chatgpt.com/*"],
+      "matches": ["<all_urls>"],
       "css": ["styles.css", "modal.css", "slider.css"],
       "js": ["wooAuth.js", "modal.js", "slider.js"],
       "run_at": "document_idle"

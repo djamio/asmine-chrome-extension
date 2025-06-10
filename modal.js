@@ -7,9 +7,9 @@ function createAuditModal() {
   }
 
   // Create modal
-  const modal = document.createElement('div');
+    const modal = document.createElement('div');
   modal.id = 'auditModal';
-  modal.innerHTML = `
+    modal.innerHTML = `
     <div class="audit-modal">
       <div class="audit-modal-content">
         <span class="close">&times;</span>
@@ -139,10 +139,10 @@ function createAuditModal() {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
-  `;
-
+    `;
+  
   // Add styles
   const styles = document.createElement('style');
   styles.textContent = `
@@ -190,24 +190,25 @@ function createAuditModal() {
       padding-bottom: 10px;
     }
 
-    .tab-btn {
+      .tab-btn {
       padding: 10px 20px;
-      border: none;
-      background: none;
-      cursor: pointer;
+        border: none;
+      background: #f8f9fa;
+        cursor: pointer;
       font-size: 16px;
       color: #666;
       border-radius: 4px 4px 0 0;
-    }
+      transition: all 0.3s ease;
+      }
 
-    .tab-btn:hover {
-      background-color: #f5f5f5;
-    }
+      .tab-btn:hover {
+      background-color: #e9ecef;
+      }
 
-    .tab-btn.active {
-      color: #96588a;
-      border-bottom: 2px solid #96588a;
-    }
+      .tab-btn.active {
+      background: #10a37f;
+      color: white;
+      }
 
     .tab-pane {
       display: none;
@@ -222,13 +223,13 @@ function createAuditModal() {
       grid-template-columns: 1fr 1fr;
       gap: 20px;
       margin-bottom: 20px;
-    }
+      }
 
     .original, .suggested {
       padding: 15px;
       background: #f9f9f9;
       border-radius: 8px;
-    }
+      }
 
     .content {
       margin: 10px 0;
@@ -237,7 +238,7 @@ function createAuditModal() {
       border: 1px solid #ddd;
       border-radius: 4px;
       min-height: 100px;
-    }
+      }
 
     .suggested .content {
       border-color: #96588a;
@@ -253,8 +254,8 @@ function createAuditModal() {
       margin-top: 10px;
       padding: 10px;
       background: #f5f5f5;
-      border-radius: 4px;
-    }
+        border-radius: 4px;
+      }
 
     .global-score {
       font-size: 24px;
@@ -302,15 +303,15 @@ function createAuditModal() {
       margin-top: 8px;
       white-space: pre-wrap;
     }
-  `;
+    `;
 
   document.head.appendChild(styles);
   document.body.appendChild(modal);
-
-  // Add tab switching functionality
+  
+    // Add tab switching functionality
   const tabButtons = modal.querySelectorAll('.tab-btn');
   const tabPanes = modal.querySelectorAll('.tab-pane');
-
+    
   tabButtons.forEach(button => {
     button.addEventListener('click', () => {
       // Remove active class from all buttons and panes
@@ -321,9 +322,9 @@ function createAuditModal() {
       button.classList.add('active');
       const tabId = `tab-${button.dataset.tab}`;
       modal.querySelector(`#${tabId}`).classList.add('active');
+      });
     });
-  });
-
+  
   // Add close button functionality
   const closeButton = modal.querySelector('.close');
   closeButton.addEventListener('click', () => {
@@ -331,7 +332,7 @@ function createAuditModal() {
   });
 
   return modal;
-}
-
+  }
+  
 window.createAuditModal = createAuditModal;
   

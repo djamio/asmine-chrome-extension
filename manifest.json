@@ -21,16 +21,16 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["slider.html", "styles.css", "reviewsStyles.css", "return.html"],
-      "matches": ["<all_urls>"]
+      "resources": ["slider.html", "styles.css", "return.html"],
+      "matches": ["https://www.chatgpt.com/*"]
     }
   ],
   
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "css": ["styles.css", "reviewsStyles.css", "modal.css", "slider.css"],
-      "js": ["wooAuth.js", "reviewsManager.js", "modal.js", "slider.js"],
+      "matches": ["https://www.chatgpt.com/*"],
+      "css": ["styles.css", "modal.css", "slider.css"],
+      "js": ["wooAuth.js", "modal.js", "slider.js"],
       "run_at": "document_idle"
     }
   ]

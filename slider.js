@@ -224,20 +224,20 @@
           }
         });
         
-        return null;
-      }
+      return null;
+  }
 
       // Add loading state
-      auditResultsDiv.innerHTML = `
-        <div style="text-align: center; padding: 20px;">
-          <div class="spinner" style="display: inline-block;">
-            <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    auditResultsDiv.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <div class="spinner" style="display: inline-block;">
+          <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <circle class="spinner" cx="12" cy="12" r="10" fill="none" stroke="#96588a" stroke-width="2"/>
-            </svg>
-          </div>
-          <p>Loading WooCommerce products...</p>
+          </svg>
         </div>
-      `;
+          <p>Loading WooCommerce products...</p>
+      </div>
+    `;
 
       console.log('Making API request with userId:', auth.wooAuth.userId);
       const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products?page=${page}`, {
@@ -286,13 +286,13 @@
         // Clear auth state and show connect button
         currentAuth = null;
         localStorage.setItem('wooAuth', JSON.stringify({ isConnected: false, userId: null }));
-        auditResultsDiv.innerHTML = `
+    auditResultsDiv.innerHTML = `
           <div style="text-align: center; padding: 20px;">
             <p>Your WooCommerce connection has expired. Please reconnect.</p>
             <button id="goToWooAuth" class="btn btn-primary">Go to WooCommerce Connection</button>
-          </div>
-        `;
-        
+      </div>
+    `;
+
         // Add click handler for the auth button
         document.getElementById('goToWooAuth')?.addEventListener('click', () => {
           const wooAuthTab = document.querySelector('[data-tab="connect"]');
@@ -312,7 +312,7 @@
         
         // Add retry handler
         document.getElementById('retryWooProducts')?.addEventListener('click', () => {
-          renderPage();
+        renderPage();
         });
       }
       return null;
@@ -348,7 +348,7 @@
       nextPageBtn.onclick = async () => {
         console.log('Next button clicked, current page:', currentPage, 'total pages:', totalPages);
         if (currentPage < totalPages && currentAuth?.isConnected) {
-          currentPage++;
+        currentPage++;
           console.log('Moving to page:', currentPage);
           await renderPage();
         }
@@ -381,7 +381,7 @@
       lastPageBtn.onclick = async () => {
         console.log('Last button clicked, current page:', currentPage, 'total pages:', totalPages);
         if (currentPage !== totalPages && currentAuth?.isConnected) {
-          currentPage = totalPages;
+        currentPage = totalPages;
           console.log('Moving to last page:', totalPages);
           await renderPage();
         }
@@ -391,15 +391,15 @@
 
   // Function to handle ChatGPT prompt generation and response
   async function handleGeneratePrompt(btn, product) {
-    btn.disabled = true;
-    btn.textContent = 'Generating...';
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
 
     // Find the compare button for this product
     const productCard = btn.closest('.product-card');
     const compareBtn = productCard.querySelector('.compare-btn');
     compareBtn.disabled = true;
 
-    const prompt = `
+        const prompt = `
 Audit the following WooCommerce product and provide a comprehensive analysis:
 
 Product Details:
@@ -473,7 +473,7 @@ generate two reviews, and no nested categories or tags.
       const textarea = document.querySelector('#prompt-textarea');
       if (textarea) {
         textarea.value = prompt;
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
         textarea.focus();
         const sendButton = document.querySelector('[data-testid="send-button"]');
         if (sendButton) {
@@ -581,18 +581,18 @@ generate two reviews, and no nested categories or tags.
                     if (resultsDiv) {
                       console.log('Displaying results summary');
                       resultsDiv.innerHTML = `
-                        <div class="audit-summary">
-                          <h4>Audit Results</h4>
+                    <div class="audit-summary">
+                      <h4>Audit Results</h4>
                           <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
                           <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
                           <div class="priority-improvements">
-                            <h5>Priority Improvements:</h5>
-                            <ul>
+                      <h5>Priority Improvements:</h5>
+                      <ul>
                               ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
-                            </ul>
+                      </ul>
                           </div>
-                        </div>
-                      `;
+                    </div>
+                  `;
                     }
                     break;
                   } else {
@@ -603,7 +603,7 @@ generate two reviews, and no nested categories or tags.
                   console.log('Attempted to parse:', match);
                 }
               }
-            } else {
+              } else {
               console.log('No JSON matches found in response');
             }
           } catch (error) {
@@ -646,11 +646,114 @@ generate two reviews, and no nested categories or tags.
     }
 
     setTimeout(() => {
-      btn.disabled = false;
-      btn.textContent = 'Generate ChatGPT Prompt';
+                btn.disabled = false;
+                btn.textContent = 'Generate ChatGPT Prompt';
     }, 1000);
   }
 
+
+   // Helper function to format arrays as tags
+   function formatAsTags(items, className) {
+    console.log(`Formatting ${className}:`, items);
+    
+    if (!Array.isArray(items) || items.length === 0) {
+      console.log(`No ${className} to format`);
+      return 'None';
+    }
+    
+    return items.map(item => {
+      console.log('Processing item:', item);
+      const text = typeof item === 'object' ? item.name : item;
+      return text;
+    }).join(', ');
+  }
+
+  // Helper function to format specifications
+  function formatSpecifications(specs) {
+    console.log('Formatting specifications:', specs);
+    
+    if (!Array.isArray(specs) || specs.length === 0) {
+      console.log('No specifications to format');
+      return 'No specifications';
+    }
+    
+    return specs.map(spec => {
+      console.log('Processing spec:', spec);
+      
+      // Handle different specification formats
+      if (typeof spec === 'string') {
+        // If it's already in "Name: Values" format
+        return `<div class="specification-item">${spec}</div>`;
+      }
+      
+      const name = spec.name || '';
+      const options = Array.isArray(spec.options) ? spec.options.join(', ') : (spec.options || '');
+      
+      return `<div class="specification-item">${name}: ${options}</div>`;
+    }).join('\n');
+  }
+
+  // Helper function to format reviews
+  function formatReviews(reviews) {
+    console.log('Formatting reviews input:', reviews);
+    
+    if (!Array.isArray(reviews) || reviews.length === 0) {
+      console.log('No reviews to format');
+      return 'No reviews';
+    }
+    
+    return reviews.map(review => {
+      console.log('Processing review:', review);
+      return `
+        <div class="review-item">
+          <div class="review-header">
+            <span class="review-author">${review.author || review.reviewer || 'Anonymous'}</span>
+            <span class="review-date">${review.date}</span>
+            <div class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
+          </div>
+          <div class="review-content">${review.review}</div>
+        </div>
+      `;
+    }).join('\n');
+  }
+
+  // Function to parse reviews from HTML content
+  function parseReviewsFromHTML(content) {
+    console.log('Parsing reviews from HTML:', content);
+    
+    if (!content || content === 'No reviews') {
+      console.log('No reviews to parse');
+      return [];
+    }
+
+    const reviewElements = content.match(/<div class="review-item">([\s\S]*?)<\/div>/g) || [];
+    console.log('Found review elements:', reviewElements);
+
+    const reviews = reviewElements.map(element => {
+      const authorMatch = element.match(/<span class="review-author">(.*?)<\/span>/);
+      const dateMatch = element.match(/<span class="review-date">(.*?)<\/span>/);
+      const ratingMatch = element.match(/<div class="review-rating">(.*?)<\/div>/);
+      const contentMatch = element.match(/<div class="review-content">(.*?)<\/div>/);
+
+      const rating = ratingMatch ? (ratingMatch[1].match(/★/g) || []).length : 0;
+
+      const review = {
+        author: authorMatch ? authorMatch[1] : 'Anonymous',
+        date: dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0],
+        rating: rating,
+        review: contentMatch ? contentMatch[1].trim() : ''
+      };
+
+      console.log('Parsed review:', review);
+      return review;
+    });
+
+    console.log('Final parsed reviews:', reviews);
+    return reviews;
+  }
+
+
+  
   // Function to handle modal updates
   function updateModalContent(modal, product, auditResults) {
     if (!modal || !product || !auditResults) {
@@ -683,106 +786,7 @@ generate two reviews, and no nested categories or tags.
       `;
     }
 
-    // Helper function to format arrays as tags
-    function formatAsTags(items, className) {
-      console.log(`Formatting ${className}:`, items);
-      
-      if (!Array.isArray(items) || items.length === 0) {
-        console.log(`No ${className} to format`);
-        return 'None';
-      }
-      
-      return items.map(item => {
-        console.log('Processing item:', item);
-        const text = typeof item === 'object' ? item.name : item;
-        return text;
-      }).join(', ');
-    }
-
-    // Helper function to format specifications
-    function formatSpecifications(specs) {
-      console.log('Formatting specifications:', specs);
-      
-      if (!Array.isArray(specs) || specs.length === 0) {
-        console.log('No specifications to format');
-        return 'No specifications';
-      }
-      
-      return specs.map(spec => {
-        console.log('Processing spec:', spec);
-        
-        // Handle different specification formats
-        if (typeof spec === 'string') {
-          // If it's already in "Name: Values" format
-          return `<div class="specification-item">${spec}</div>`;
-        }
-        
-        const name = spec.name || '';
-        const options = Array.isArray(spec.options) ? spec.options.join(', ') : (spec.options || '');
-        
-        return `<div class="specification-item">${name}: ${options}</div>`;
-      }).join('\n');
-    }
-
-    // Helper function to format reviews
-    function formatReviews(reviews) {
-      console.log('Formatting reviews input:', reviews);
-      
-      if (!Array.isArray(reviews) || reviews.length === 0) {
-        console.log('No reviews to format');
-        return 'No reviews';
-      }
-      
-      return reviews.map(review => {
-        console.log('Processing review:', review);
-        return `
-          <div class="review-item">
-            <div class="review-header">
-              <span class="review-author">${review.author || review.reviewer || 'Anonymous'}</span>
-              <span class="review-date">${review.date}</span>
-              <div class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
-            </div>
-            <div class="review-content">${review.review}</div>
-          </div>
-        `;
-      }).join('\n');
-    }
-
-    // Function to parse reviews from HTML content
-    function parseReviewsFromHTML(content) {
-      console.log('Parsing reviews from HTML:', content);
-      
-      if (!content || content === 'No reviews') {
-        console.log('No reviews to parse');
-        return [];
-      }
-
-      const reviewElements = content.match(/<div class="review-item">([\s\S]*?)<\/div>/g) || [];
-      console.log('Found review elements:', reviewElements);
-
-      const reviews = reviewElements.map(element => {
-        const authorMatch = element.match(/<span class="review-author">(.*?)<\/span>/);
-        const dateMatch = element.match(/<span class="review-date">(.*?)<\/span>/);
-        const ratingMatch = element.match(/<div class="review-rating">(.*?)<\/div>/);
-        const contentMatch = element.match(/<div class="review-content">(.*?)<\/div>/);
-
-        const rating = ratingMatch ? (ratingMatch[1].match(/★/g) || []).length : 0;
-
-        const review = {
-          author: authorMatch ? authorMatch[1] : 'Anonymous',
-          date: dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0],
-          rating: rating,
-          review: contentMatch ? contentMatch[1].trim() : ''
-        };
-
-        console.log('Parsed review:', review);
-        return review;
-      });
-
-      console.log('Final parsed reviews:', reviews);
-      return reviews;
-    }
-
+   
     // Update title tab
     const titleTab = modal.querySelector('#tab-title');
     if (titleTab) {
@@ -839,7 +843,7 @@ generate two reviews, and no nested categories or tags.
           const options = Array.isArray(spec.options) ? spec.options.join(', ') : (spec.options || '');
           return `<div class="specification-item">${name}: ${options}</div>`;
         }).join('\n');
-      } else {
+        } else {
         suggestedSpecs = 'No suggestions';
       }
       console.log('Formatted suggested specs:', suggestedSpecs);
@@ -1225,7 +1229,7 @@ generate two reviews, and no nested categories or tags.
         // Listen for auth changes
         document.addEventListener('wooAuthChanged', (event) => {
           if (event.detail.connected) {
-            renderPage();
+        renderPage();
           }
         });
       })

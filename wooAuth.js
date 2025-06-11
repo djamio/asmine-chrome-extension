@@ -39,6 +39,7 @@ class WooAuth {
   async init() {
     console.log('Initializing WooAuth');
     try {
+      // Check if we have valid credentials
       if (this.hasValidCredentials()) {
         console.log('Found stored credentials');
         const credentials = this.getStoredCredentials();
@@ -318,63 +319,64 @@ class WooAuth {
   }
 
   async updateUI(isConnected, shopUrl = '') {
-    const statusText = document.getElementById('authStatusText');
-    const authorizeButton = document.getElementById('authorizeWoo');
-    const resetButton = document.getElementById('resetWooAuth');
-    const authForm = document.querySelector('.auth-form');
-    const authInfo = document.querySelector('.auth-info');
-    const shopUrlInput = document.getElementById('shopUrl');
+    // Wait for elements to be available
+    let retries = 0;
+    const maxRetries = 50;
+    
+    while (retries < maxRetries) {
+      const elements = {
+        statusText: document.getElementById('authStatusText'),
+        authorizeButton: document.getElementById('authorizeWoo'),
+        resetButton: document.getElementById('resetWooAuth'),
+        authForm: document.querySelector('.auth-form'),
+        authInfo: document.querySelector('.auth-info'),
+        shopUrlInput: document.getElementById('shopUrl')
+      };
 
-    if (statusText) {
-      statusText.textContent = isConnected ? 'Connected' : 'Not Connected';
-      statusText.style.color = isConnected ? '#4CAF50' : '#dc3545';
-    }
+      if (Object.values(elements).every(el => el !== null)) {
+        console.log('All UI elements found, updating UI');
+        
+        elements.statusText.textContent = isConnected ? 'Connected' : 'Not Connected';
+        elements.statusText.style.color = isConnected ? '#4CAF50' : '#dc3545';
 
-    if (authorizeButton) {
-      authorizeButton.style.display = isConnected ? 'none' : 'block';
-    }
+        elements.authorizeButton.style.display = isConnected ? 'none' : 'block';
+        elements.resetButton.style.display = isConnected ? 'block' : 'none';
+        elements.authForm.style.display = isConnected ? 'none' : 'block';
 
-    if (resetButton) {
-      resetButton.style.display = isConnected ? 'block' : 'none';
-    }
+        if (elements.authInfo) {
+          if (isConnected) {
+            elements.authInfo.innerHTML = `
+              <div class="connection-details">
+                <p style="color: #4CAF50; margin-bottom: 10px;">✓ Successfully connected to your WooCommerce store</p>
+                <p style="color: #666; font-size: 14px;">Connected to: ${shopUrl}</p>
+              </div>`;
+          } else {
+            elements.authInfo.innerHTML = '<p>Enter your WooCommerce shop URL and click connect. You\'ll be redirected to your shop to authorize access.</p>';
+          }
+        }
 
-    if (authForm) {
-      authForm.style.display = isConnected ? 'none' : 'block';
-    }
+        if (elements.shopUrlInput && shopUrl) {
+          elements.shopUrlInput.value = shopUrl;
+        }
 
-    if (authInfo) {
-      if (isConnected) {
-        authInfo.innerHTML = `
-          <div class="connection-details">
-            <p style="color: #4CAF50; margin-bottom: 10px;">✓ Successfully connected to your WooCommerce store</p>
-            <p style="color: #666; font-size: 14px;">Connected to: ${shopUrl}</p>
-          </div>`;
-      } else {
-        authInfo.innerHTML = '<p>Enter your WooCommerce shop URL and click connect. You\'ll be redirected to your shop to authorize access.</p>';
+        // Dispatch auth changed event
+        const auth = JSON.parse(localStorage.getItem('wooAuth'));
+        document.dispatchEvent(new CustomEvent('wooAuthChanged', {
+          detail: { 
+            connected: isConnected,
+            userId: auth?.wooAuth?.userId || null
+          }
+        }));
+
+        return;
       }
+
+      console.log('Waiting for UI elements, attempt', retries + 1);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      retries++;
     }
 
-    if (shopUrlInput && shopUrl) {
-      shopUrlInput.value = shopUrl;
-    }
-
-    // Get userId and dispatch event
-    if (isConnected) {
-    const auth = JSON.parse(localStorage.getItem('wooAuth'));
-      document.dispatchEvent(new CustomEvent('wooAuthChanged', {
-        detail: { 
-          connected: isConnected,
-          userId: auth.wooAuth?.userId || null
-        }
-      }));
-    } else {
-      document.dispatchEvent(new CustomEvent('wooAuthChanged', {
-        detail: { 
-          connected: false,
-          userId: null
-        }
-      }));
-    }
+    console.error('Could not find UI elements after', maxRetries, 'attempts');
   }
 
   initializeResetButton() {

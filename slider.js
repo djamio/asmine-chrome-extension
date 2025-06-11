@@ -1094,7 +1094,7 @@ generate two reviews, and no nested categories or tags.
 
   function injectSlider() {
     console.log('Starting slider injection...');
-    fetch(chrome.runtime.getURL('slider.html'))
+    return fetch(chrome.runtime.getURL('slider.html'))
       .then(response => response.text())
       .then(html => {
         console.log('Slider HTML fetched');
@@ -1110,31 +1110,19 @@ generate two reviews, and no nested categories or tags.
         document.head.appendChild(cssLink);
 
         // Get slider elements
-        const toggleBtn = document.querySelector('.my-slider-toggle-btn');
         const slider = document.querySelector('.my-slider');
-        console.log('Toggle button found:', !!toggleBtn);
         console.log('Slider found:', !!slider);
 
-        // Hide toggle button and open slider by default
-        if (toggleBtn) toggleBtn.style.display = 'none';
+        // Open slider by default
         if (slider) {
           slider.classList.add('open');
           document.body.classList.add('slider-open');
         }
 
-        /* Commented out toggle button functionality
-        toggleBtn.addEventListener('click', () => {
-          slider.classList.add('open');
-          document.body.classList.add('slider-open');
-          toggleBtn.style.display = 'none';
-        });
-        */
-
         // Keep close button functionality
         slider.querySelector('.my-slider-close').addEventListener('click', () => {
           slider.classList.remove('open');
           document.body.classList.remove('slider-open');
-          // Commented out: toggleBtn.style.display = 'block';
         });
 
         // Add tab switching functionality
@@ -1161,7 +1149,7 @@ generate two reviews, and no nested categories or tags.
               // If switching to audit tab, check auth state and render if needed
               if (target === 'audit') {
                 const auth = JSON.parse(localStorage.getItem('wooAuth'));
-                currentAuth = auth.wooAuth;
+                currentAuth = auth?.wooAuth;
                 if (currentAuth?.isConnected) {
                   renderPage();
                 }
@@ -1172,8 +1160,26 @@ generate two reviews, and no nested categories or tags.
 
         // Initialize auditResultsDiv
         auditResultsDiv = document.getElementById('auditResults');
-        
-        // Create and initialize WooAuth
+
+        // Wait for all elements to be ready before initializing WooAuth
+        return new Promise((resolve) => {
+          const checkElements = () => {
+            if (checkRequiredElements()) {
+              console.log('All elements ready, initializing WooAuth');
+              if (!window.wooAuth) {
+                window.wooAuth = new WooAuth();
+              }
+              resolve();
+            } else {
+              console.log('Elements not ready, retrying in 100ms');
+              setTimeout(checkElements, 100);
+            }
+          };
+          checkElements();
+        });
+      })
+      .then(() => {
+        // Add event listeners after WooAuth is initialized
         const authorizeButton = document.getElementById('authorizeWoo');
         if (authorizeButton) {
           console.log('Adding click listener to authorize button');
@@ -1187,7 +1193,7 @@ generate two reviews, and no nested categories or tags.
         // Listen for auth changes
         document.addEventListener('wooAuthChanged', (event) => {
           if (event.detail.connected) {
-        renderPage();
+            renderPage();
           }
         });
       })

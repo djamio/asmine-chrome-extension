@@ -256,13 +256,11 @@
 
       // Add loading state
       auditResultsDiv.innerHTML = `
-        <div style="text-align: center; padding: 20px;">
-          <div class="spinner" style="display: inline-block;">
-            <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <circle class="spinner" cx="12" cy="12" r="10" fill="none" stroke="#96588a" stroke-width="2"/>
-            </svg>
+        <div class="loading-container">
+          <div class="loading-spinner">
+            <div class="spinner-ring"></div>
           </div>
-            <p>Loading WooCommerce products...</p>
+          <p class="loading-text">Loading WooCommerce products...</p>
         </div>
       `;
 
@@ -1388,11 +1386,24 @@ generate two reviews, and no nested categories or tags.
   // Function to update product reviews
   async function updateProductReviews(productId, reviews) {
     try {
+      // Get WooAuth instance and credentials
+      const wooAuth = window.wooAuth;
+      if (!wooAuth) {
+        throw new Error('WooCommerce authentication not initialized');
+      }
+
+      const credentials = wooAuth.getStoredCredentials();
+      if (!credentials) {
+        throw new Error('No WooCommerce credentials found');
+      }
+
       const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${productId}/reviews`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-woo-user-id': currentAuth.userId
+          'x-woo-store-url': credentials.storeUrl,
+          'x-woo-consumer-key': credentials.consumerKey,
+          'x-woo-consumer-secret': credentials.consumerSecret
         },
         body: JSON.stringify({ reviews })
       });

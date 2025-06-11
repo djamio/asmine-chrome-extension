@@ -162,7 +162,7 @@ function createAuditModal() {
       margin: 5% auto;
       padding: 20px;
       width: 80%;
-      max-width: 900px;
+      max-width: 80vw;
       border-radius: 8px;
       position: relative;
       max-height: 80vh;

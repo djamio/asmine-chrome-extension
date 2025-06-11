@@ -195,6 +195,32 @@
   styleElement.textContent = modalStyles;
   document.head.appendChild(styleElement);
 
+  // Function to check if all required elements are loaded
+  function checkRequiredElements() {
+    const elements = {
+      statusText: document.getElementById('authStatusText'),
+      authorizeButton: document.getElementById('authorizeWoo'),
+      resetButton: document.getElementById('resetWooAuth'),
+      authForm: document.querySelector('.auth-form'),
+      authInfo: document.querySelector('.auth-info'),
+      shopUrlInput: document.getElementById('shopUrl'),
+      auditResults: document.getElementById('auditResults')
+    };
+
+    console.log('Checking elements:', Object.entries(elements).reduce((acc, [key, value]) => {
+      acc[key] = !!value;
+      return acc;
+    }, {}));
+
+    return Object.values(elements).every(el => el !== null);
+  }
+
+  // Function to check if we should load products
+  function shouldLoadProducts() {
+    const auditTab = document.getElementById('tab-audit');
+    return auditTab && auditTab.style.display === 'block' && currentAuth?.isConnected;
+  }
+
   // Function to fetch products from API
   async function fetchProducts(page = 1) {
     try {
@@ -1146,13 +1172,10 @@ generate two reviews, and no nested categories or tags.
             if (targetContent) {
               targetContent.style.display = 'block';
               
-              // If switching to audit tab, check auth state and render if needed
-              if (target === 'audit') {
-                const auth = JSON.parse(localStorage.getItem('wooAuth'));
-                currentAuth = auth?.wooAuth;
-                if (currentAuth?.isConnected) {
-                  renderPage();
-                }
+              // If switching to audit tab and we're connected, load products
+              if (target === 'audit' && currentAuth?.isConnected) {
+                console.log('Loading products for audit tab');
+                renderPage();
               }
             }
           });
@@ -1192,10 +1215,21 @@ generate two reviews, and no nested categories or tags.
 
         // Listen for auth changes
         document.addEventListener('wooAuthChanged', (event) => {
-          if (event.detail.connected) {
+          console.log('Auth state changed:', event.detail);
+          currentAuth = { isConnected: event.detail.connected };
+          if (event.detail.connected && shouldLoadProducts()) {
+            console.log('Connected and on audit tab, loading products');
             renderPage();
           }
         });
+
+        // Check if we should load products immediately
+        const auth = JSON.parse(localStorage.getItem('wooAuth'));
+        if (auth?.wooAuth?.isConnected && shouldLoadProducts()) {
+          console.log('Already connected and on audit tab, loading products');
+          currentAuth = auth.wooAuth;
+          renderPage();
+        }
       })
       .catch(error => console.error('Error injecting slider:', error));
   }

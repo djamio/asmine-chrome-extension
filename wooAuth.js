@@ -232,11 +232,40 @@ class WooAuth {
 
   async resetAuth(showUI = true) {
     try {
+      console.log('Resetting WooAuth...');
       // Clear all auth data
       localStorage.removeItem('wooAuth');
+      localStorage.removeItem('extensionId');
+      
       if (showUI) {
         await this.updateUI(false);
+        // Clear any error messages
+        const errorContainer = document.querySelector('.error-container');
+        if (errorContainer) {
+          errorContainer.remove();
+        }
+        // Reset shop URL input
+        const shopUrlInput = document.getElementById('shopUrl');
+        if (shopUrlInput) {
+          shopUrlInput.value = '';
+        }
+        // Switch back to connect tab
+        const connectTab = document.querySelector('[data-tab="connect"]');
+        if (connectTab) {
+          connectTab.click();
+        }
       }
+      
+      // Dispatch auth changed event
+      document.dispatchEvent(new CustomEvent('wooAuthChanged', {
+        detail: { 
+          connected: false,
+          userId: null,
+          storeUrl: null,
+          isConnected: false
+        }
+      }));
+      
     } catch (error) {
       console.error('Reset auth error:', error);
       this.showError('Failed to reset authentication. Please try again.');
@@ -359,14 +388,27 @@ class WooAuth {
           elements.shopUrlInput.value = shopUrl;
         }
 
-        // Dispatch auth changed event
+        // Get stored auth data
         const auth = JSON.parse(localStorage.getItem('wooAuth'));
+        
+        // Dispatch auth changed event with complete auth data
         document.dispatchEvent(new CustomEvent('wooAuthChanged', {
           detail: { 
             connected: isConnected,
-            userId: auth?.wooAuth?.userId || null
+            userId: auth?.wooAuth?.userId || null,
+            storeUrl: shopUrl || auth?.wooAuth?.storeUrl,
+            isConnected: isConnected
           }
         }));
+
+        // If connected, switch to audit tab
+        if (isConnected) {
+          const auditTab = document.querySelector('[data-tab="audit"]');
+          if (auditTab) {
+            console.log('Switching to audit tab');
+            auditTab.click();
+          }
+        }
 
         return;
       }
@@ -384,9 +426,17 @@ class WooAuth {
     if (resetButton) {
       resetButton.addEventListener('click', async () => {
         if (confirm('Are you sure you want to reset the WooCommerce connection? This will require you to reconnect.')) {
-          await this.resetAuth();
+          try {
+            await this.resetAuth();
+            console.log('WooAuth reset successful');
+          } catch (error) {
+            console.error('Error during reset:', error);
+            this.showError('Failed to reset the connection. Please try again.');
+          }
         }
       });
+    } else {
+      console.warn('Reset button not found in the DOM');
     }
   }
 

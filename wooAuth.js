@@ -5,12 +5,13 @@ class WooAuth {
     this.APP_NAME = 'ChatGPT WooCommerce Audit';
     this.CALLBACK_URL = 'https://asmine-production.up.railway.app/woo/callback';
     
-    // Bind methods
+    // Bind methods to preserve 'this' context
     this.authorize = this.authorize.bind(this);
     this.checkAuthStatus = this.checkAuthStatus.bind(this);
     this.updateUI = this.updateUI.bind(this);
     this.resetAuth = this.resetAuth.bind(this);
     this.validateUrl = this.validateUrl.bind(this);
+    this.initializeResetButton = this.initializeResetButton.bind(this);
 
     // Initialize
     this.init().catch(error => {
@@ -33,7 +34,11 @@ class WooAuth {
       }
     });
 
-    this.initializeResetButton();
+    // Initialize reset button with a delay to ensure DOM is ready
+    setTimeout(() => {
+      console.log('Delayed initialization of reset button...');
+      this.initializeResetButton();
+    }, 1000);
   }
 
   async init() {
@@ -231,44 +236,53 @@ class WooAuth {
   }
 
   async resetAuth(showUI = true) {
+    console.log('resetAuth called with showUI:', showUI);
     try {
-      console.log('Resetting WooAuth...');
       // Clear all auth data
       localStorage.removeItem('wooAuth');
       localStorage.removeItem('extensionId');
-      
+      console.log('Local storage cleared');
+
       if (showUI) {
+        console.log('Updating UI...');
         await this.updateUI(false);
+        
         // Clear any error messages
         const errorContainer = document.querySelector('.error-container');
         if (errorContainer) {
           errorContainer.remove();
         }
+
         // Reset shop URL input
         const shopUrlInput = document.getElementById('shopUrl');
         if (shopUrlInput) {
           shopUrlInput.value = '';
         }
+
         // Switch back to connect tab
         const connectTab = document.querySelector('[data-tab="connect"]');
         if (connectTab) {
+          console.log('Switching to connect tab');
           connectTab.click();
         }
       }
-      
+
       // Dispatch auth changed event
-      document.dispatchEvent(new CustomEvent('wooAuthChanged', {
+      const event = new CustomEvent('wooAuthChanged', {
         detail: { 
           connected: false,
           userId: null,
           storeUrl: null,
           isConnected: false
         }
-      }));
-      
+      });
+      console.log('Dispatching wooAuthChanged event:', event);
+      document.dispatchEvent(event);
+
     } catch (error) {
       console.error('Reset auth error:', error);
       this.showError('Failed to reset authentication. Please try again.');
+      throw error;
     }
   }
 
@@ -422,21 +436,35 @@ class WooAuth {
   }
 
   initializeResetButton() {
+    console.log('Attempting to initialize reset button');
     const resetButton = document.getElementById('resetWooAuth');
+    console.log('Reset button found:', resetButton);
+
     if (resetButton) {
-      resetButton.addEventListener('click', async () => {
+      console.log('Adding click listener to reset button');
+      
+      // Remove any existing listeners
+      const newResetButton = resetButton.cloneNode(true);
+      resetButton.parentNode.replaceChild(newResetButton, resetButton);
+      
+      newResetButton.onclick = async (e) => {
+        console.log('Reset button clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        
         if (confirm('Are you sure you want to reset the WooCommerce connection? This will require you to reconnect.')) {
+          console.log('Reset confirmed, calling resetAuth...');
           try {
             await this.resetAuth();
-            console.log('WooAuth reset successful');
+            console.log('Reset completed successfully');
           } catch (error) {
-            console.error('Error during reset:', error);
+            console.error('Reset failed:', error);
             this.showError('Failed to reset the connection. Please try again.');
           }
         }
-      });
+      };
     } else {
-      console.warn('Reset button not found in the DOM');
+      console.warn('Reset button not found in DOM');
     }
   }
 

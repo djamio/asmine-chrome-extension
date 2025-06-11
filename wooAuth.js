@@ -153,16 +153,22 @@ class WooAuth {
     // Remove trailing slash if present
     const baseUrl = shopUrl.replace(/\/$/, '');
     
+    // Use backend return URL
+    const returnUrl = 'https://asmine-production.up.railway.app/woo/return';
+    console.log('Return URL:', returnUrl);
+    
     // Construct the authorization URL with required parameters
     const params = new URLSearchParams({
       app_name: encodeURIComponent(this.APP_NAME),
       scope: 'read_write',
       user_id: userId,
-      return_url: encodeURIComponent(chrome.runtime.getURL('return.html')),
+      return_url: encodeURIComponent(returnUrl),
       callback_url: encodeURIComponent(this.CALLBACK_URL)
     });
 
-    return `${baseUrl}/wc-auth/v1/authorize?${params.toString()}`;
+    const authUrl = `${baseUrl}/wc-auth/v1/authorize?${params.toString()}`;
+    console.log('Built auth URL:', authUrl);
+    return authUrl;
   }
 
   async checkAuthStatus(userId = null) {

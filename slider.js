@@ -387,7 +387,7 @@ Audit the following WooCommerce product and provide a comprehensive analysis:
 Product Details:
 - Title: ${product.title}
 - Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
-- Full Description: ${product.description}
+- Full Description: ${product.description && product.description.length ? product.description.slice(0, 200) : 'No description available'}
 - Specifications: ${JSON.stringify(product.specifications || [])}
 - Categories: ${JSON.stringify(product.categories || [])}
 - Tags: ${JSON.stringify(product.tags || [])}
@@ -686,14 +686,19 @@ generate two reviews, and no nested categories or tags.
     
     return reviews.map(review => {
       console.log('Processing review:', review);
+      const reviewText = review.review || review.content || '';
+      const author = review.reviewer || review.author || 'Anonymous';
+      const date = review.date_created || review.date || new Date().toISOString().split('T')[0];
+      const rating = review.rating || 0;
+
       return `
         <div class="review-item">
           <div class="review-header">
-            <span class="review-author">${review.author || review.reviewer || 'Anonymous'}</span>
-            <span class="review-date">${review.date}</span>
-            <div class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</div>
+            <span class="review-author">${author}</span>
+            <span class="review-date">${date}</span>
+            <div class="review-rating">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</div>
           </div>
-          <div class="review-content">${review.review}</div>
+          <div class="review-content">${reviewText}</div>
         </div>
       `;
     }).join('\n');
@@ -740,6 +745,19 @@ generate two reviews, and no nested categories or tags.
   function updateModalContent(modal, product, auditResults) {
     if (!modal || !product || !auditResults) {
       console.error('Missing required data for modal update:', { modal, product, auditResults });
+      return;
+    }
+
+    // Get stored auth data
+    const authData = JSON.parse(localStorage.getItem('wooAuth'));
+    if (!authData?.wooAuth) {
+      console.error('No WooCommerce authentication data found');
+      return;
+    }
+
+    const { storeUrl, consumerKey, consumerSecret } = authData.wooAuth;
+    if (!storeUrl || !consumerKey || !consumerSecret) {
+      console.error('Missing required WooCommerce credentials');
       return;
     }
 
@@ -949,13 +967,15 @@ generate two reviews, and no nested categories or tags.
             const updates = formatUpdateData(field, content);
             response = await updateProductReviews(product.id, updates.reviews);
           } else {
-            // Handle other fields as before
+            // Handle other fields
             const updates = formatUpdateData(field, content);
             response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${product.id}`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
-                'x-woo-user-id': currentAuth.userId
+                'x-woo-store-url': storeUrl,
+                'x-woo-consumer-key': consumerKey,
+                'x-woo-consumer-secret': consumerSecret
               },
               body: JSON.stringify(updates)
             });
@@ -984,15 +1004,22 @@ generate two reviews, and no nested categories or tags.
 
         } catch (error) {
           console.error('Error applying changes:', error);
-          button.textContent = 'Error!';
+          button.textContent = 'Error - Try Again';
           button.classList.remove('loading');
           button.classList.add('error');
+          button.disabled = false;
+
+          // Show error message
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-message';
+          errorDiv.textContent = error.message || 'Failed to apply changes';
+          button.parentNode.appendChild(errorDiv);
 
           setTimeout(() => {
             button.textContent = 'Apply Changes';
             button.classList.remove('error');
-            button.disabled = false;
-          }, 2000);
+            errorDiv.remove();
+          }, 3000);
         }
       });
     });
@@ -1363,14 +1390,29 @@ generate two reviews, and no nested categories or tags.
             return { reviews: [] };
           }
 
-          const reviews = parseReviewsFromHTML(content);
-          console.log('Formatted reviews for update:', reviews);
-          
-          if (reviews.length === 0) {
-            console.log('No reviews parsed from content');
-            return { reviews: [] };
-          }
+          // Parse reviews from the suggested content
+          const reviewElements = content.match(/<div class="review-item">([\s\S]*?)<\/div>/g) || [];
+          console.log('Found review elements:', reviewElements);
 
+          const reviews = reviewElements.map(element => {
+            const authorMatch = element.match(/<span class="review-author">(.*?)<\/span>/);
+            const dateMatch = element.match(/<span class="review-date">(.*?)<\/span>/);
+            const ratingMatch = element.match(/<div class="review-rating">(.*?)<\/div>/);
+            const contentMatch = element.match(/<div class="review-content">(.*?)<\/div>/);
+
+            const rating = ratingMatch ? (ratingMatch[1].match(/★/g) || []).length : 0;
+
+            return {
+              reviewer: authorMatch ? authorMatch[1].trim() : 'Anonymous',
+              date_created: dateMatch ? dateMatch[1].trim() : new Date().toISOString().split('T')[0],
+              rating: rating,
+              review: contentMatch ? contentMatch[1].trim() : '',
+              verified: true,
+              status: 'approved'
+            };
+          });
+
+          console.log('Formatted reviews for update:', reviews);
           return { reviews };
         } catch (e) {
           console.error('Error parsing reviews:', e);
@@ -1386,26 +1428,64 @@ generate two reviews, and no nested categories or tags.
   // Function to update product reviews
   async function updateProductReviews(productId, reviews) {
     try {
-      // Get WooAuth instance and credentials
-      const wooAuth = window.wooAuth;
-      if (!wooAuth) {
-        throw new Error('WooCommerce authentication not initialized');
+      console.log('Updating reviews for product:', productId);
+      console.log('Reviews data:', reviews);
+
+      // Get stored auth data directly from localStorage
+      const authData = JSON.parse(localStorage.getItem('wooAuth'));
+      if (!authData?.wooAuth) {
+        throw new Error('No WooCommerce authentication data found');
       }
 
-      const credentials = wooAuth.getStoredCredentials();
-      if (!credentials) {
-        throw new Error('No WooCommerce credentials found');
+      const { storeUrl, consumerKey, consumerSecret } = authData.wooAuth;
+      if (!storeUrl || !consumerKey || !consumerSecret) {
+        throw new Error('Missing required WooCommerce credentials');
       }
 
+      console.log('Using credentials:', {
+        storeUrl,
+        hasConsumerKey: !!consumerKey,
+        hasConsumerSecret: !!consumerSecret
+      });
+
+      // Get the suggested content
+      const suggestedContent = document.querySelector('#tab-reviews .suggested-content');
+      if (!suggestedContent) {
+        throw new Error('Could not find suggested reviews content');
+      }
+
+      // Parse reviews from the suggested content
+      const reviewElements = suggestedContent.querySelectorAll('.review-item');
+      console.log('Found review elements:', reviewElements.length);
+
+      const reviewsToUpdate = Array.from(reviewElements).map(element => {
+        const author = element.querySelector('.review-author')?.textContent || 'Anonymous';
+        const date = element.querySelector('.review-date')?.textContent || new Date().toISOString().split('T')[0];
+        const ratingStars = element.querySelector('.review-rating')?.textContent.match(/★/g)?.length || 0;
+        const reviewText = element.querySelector('.review-content')?.textContent.trim() || '';
+
+        return {
+          reviewer: author,
+          date_created: date,
+          rating: ratingStars,
+          review: reviewText,
+          verified: true,
+          status: 'approved'
+        };
+      });
+
+      console.log('Parsed reviews to update:', reviewsToUpdate);
+
+      // Make the API request with proper headers
       const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${productId}/reviews`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-woo-store-url': credentials.storeUrl,
-          'x-woo-consumer-key': credentials.consumerKey,
-          'x-woo-consumer-secret': credentials.consumerSecret
+          'x-woo-store-url': storeUrl,
+          'x-woo-consumer-key': consumerKey,
+          'x-woo-consumer-secret': consumerSecret
         },
-        body: JSON.stringify({ reviews })
+        body: JSON.stringify({ reviews: reviewsToUpdate })
       });
 
       if (!response.ok) {

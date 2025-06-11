@@ -21,7 +21,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["slider.html", "styles.css", "return.html"],
+      "resources": ["slider.html", "styles.css"],
       "matches": ["<all_urls>"]
     }
   ],

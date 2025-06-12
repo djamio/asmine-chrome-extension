@@ -221,6 +221,68 @@
     return auditTab && auditTab.style.display === 'block' && currentAuth?.isConnected;
   }
 
+  // Reusable function to display products list
+  function displayProductsList(products, totalProducts = 0, totalPages = 1, currentPage = 1) {
+    if (!auditResultsDiv) {
+      console.error('auditResultsDiv not found');
+      return;
+    }
+
+    // Create product cards
+    auditResultsDiv.innerHTML = `
+      <div class="products-grid">
+        ${products.map((p, i) => `
+          <div class="product-card" data-index="${i}" data-product-id="${p.id}">
+            <div class="product-header">
+              <img src="${p.images?.[0]?.src || 'https://via.placeholder.com/150'}" 
+                   alt="${p.title}"
+                   style="width: 100%; height: 150px; object-fit: contain; background: #f5f5f5;" />
+              <span class="product-status">${p.status || 'Active'}</span>
+            </div>
+            <div class="product-info">
+              <h3>${p.title}</h3>
+              <p class="product-meta">SKU: ${p.sku || 'N/A'} | Stock: ${p.stock_quantity || 0}</p>
+              <p class="product-price">${p.price || '$0.00'}</p>
+              <p class="product-description">${p.shortDescription || p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
+              <div class="product-tags">
+                ${(p.categories || []).map(cat => `
+                  <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
+                `).join('')}
+                ${(p.tags || []).map(tag => `
+                  <span class="tag">${typeof tag === 'object' ? tag.name : tag}</span>
+                `).join('')}
+              </div>
+              <div class="button-group">
+                <button class="generate-prompt-btn">Generate ChatGPT Prompt</button>
+                <button class="compare-btn" data-product-id="${p.id}" disabled>Compare Changes</button>
+              </div>
+              <div class="audit-results"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="products-summary">
+        <p>Total Products: ${totalProducts}</p>
+      </div>
+      ${totalPages > 1 ? `
+        <div class="pagination">
+          <button id="firstPage" ${currentPage === 1 ? 'disabled' : ''}>⟪ First</button>
+          <button id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
+          <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+          <button id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+          <button id="lastPage" ${currentPage === totalPages ? 'disabled' : ''}>Last ⟫</button>
+        </div>
+      ` : ''}
+    `;
+
+    // Attach event listeners
+    attachGeneratePromptListeners(products);
+    attachCompareButtonListeners(products);
+    if (totalPages > 1) {
+      attachPaginationListeners(totalPages);
+    }
+  }
+
   // Function to fetch products from API
   async function fetchProducts(page = 1) {
     try {
@@ -288,6 +350,15 @@
       }
 
       const data = await response.json();
+      if (data.products && data.products.length > 0) {
+        displayProductsList(data.products, data.totalProducts, data.total_pages, page);
+      } else {
+        auditResultsDiv.innerHTML = `
+          <div class="no-results">
+            <p>No products found.</p>
+          </div>
+        `;
+      }
       return data;
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -1088,59 +1159,7 @@ generate two reviews, and no nested categories or tags.
     console.log(`Rendering ${products.length} products, page ${currentPage}/${totalPages}`);
 
     // Create product cards
-    auditResultsDiv.innerHTML = `
-      <div class="products-grid">
-        ${products.map((p, i) => `
-          <div class="product-card" data-index="${i}" data-product-id="${p.id}">
-            <div class="product-header">
-              <img src="${p.images?.[0]?.src || 'https://via.placeholder.com/150'}" 
-                   alt="${p.title}"
-                   style="width: 100%; height: 150px; object-fit: contain; background: #f5f5f5;" />
-              <span class="product-status">${p.status || 'Active'}</span>
-            </div>
-            <div class="product-info">
-              <h3>${p.title}</h3>
-              <p class="product-meta">SKU: ${p.sku || 'N/A'} | Stock: ${p.stock_quantity || 0}</p>
-              <p class="product-price">${p.price || '$0.00'}</p>
-              <p class="product-description">${p.shortDescription || p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
-              <div class="product-tags">
-                ${(p.categories || []).map(cat => `
-                  <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
-                `).join('')}
-                ${(p.tags || []).map(tag => `
-                  <span class="tag">${typeof tag === 'object' ? tag.name : tag}</span>
-                `).join('')}
-              </div>
-              <div class="button-group">
-                <button class="generate-prompt-btn">Generate ChatGPT Prompt</button>
-                <button class="compare-btn" data-product-id="${p.id}" disabled>Compare Changes</button>
-              </div>
-              <div class="audit-results"></div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="products-summary">
-        <p>Total Products: ${totalProducts}</p>
-      </div>
-      <div class="pagination">
-        <button id="firstPage" ${currentPage === 1 ? 'disabled' : ''}>⟪ First</button>
-        <button id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>⟨ Previous</button>
-        <span class="page-info">
-          Page ${currentPage} of ${totalPages}
-          (${(currentPage - 1) * data.itemsPerPage + 1}-${Math.min(currentPage * data.itemsPerPage, totalProducts)} of ${totalProducts} products)
-        </span>
-        <button id="nextPage" ${currentPage >= totalPages ? 'disabled' : ''}>Next ⟩</button>
-        <button id="lastPage" ${currentPage >= totalPages ? 'disabled' : ''}>Last ⟫</button>
-      </div>
-    `;
-
-    console.log('Page rendered, attaching pagination listeners');
-    // Attach pagination listeners
-    await attachPaginationListeners(totalPages);
-
-    // Attach generate prompt button listeners
-    attachGeneratePromptListeners(products);
+    displayProductsList(products, totalProducts, totalPages, currentPage);
   }
 
   function injectSlider() {
@@ -1524,5 +1543,128 @@ generate two reviews, and no nested categories or tags.
     document.addEventListener('DOMContentLoaded', initializeWooAuth);
   } else {
     initializeWooAuth();
+  }
+
+  // Function to initialize search functionality
+  function initializeSearch() {
+    console.log('Initializing search functionality...');
+    
+    const searchButton = document.getElementById('searchProducts');
+    const searchInput = document.getElementById('productSearch');
+
+    if (searchButton && searchInput) {
+      console.log('Search elements found, adding listeners');
+      
+      // Search button click handler
+      searchButton.addEventListener('click', () => {
+        console.log('Search button clicked');
+        const query = searchInput.value.trim();
+        if (query) {
+          searchProducts(query);
+        }
+      });
+
+      // Enter key handler
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          console.log('Enter key pressed in search');
+          const query = e.target.value.trim();
+          if (query) {
+            searchProducts(query);
+          }
+        }
+      });
+
+      console.log('Search listeners added successfully');
+    } else {
+      console.warn('Search elements not found:', { searchButton, searchInput });
+    }
+  }
+
+  // Initialize search when auth state changes
+  document.addEventListener('wooAuthChanged', (event) => {
+    console.log('Auth state changed, initializing search if connected');
+    if (event.detail.connected) {
+      // Wait a bit for the DOM to update
+      setTimeout(initializeSearch, 500);
+    }
+  });
+
+  // Also try to initialize search on DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSearch);
+  } else {
+    initializeSearch();
+  }
+
+  // Function to search products
+  async function searchProducts(query) {
+    try {
+      console.log('Searching products with query:', query);
+      
+      // Get WooAuth instance and credentials
+      const authData = JSON.parse(localStorage.getItem('wooAuth'));
+      if (!authData?.wooAuth) {
+        throw new Error('No WooCommerce authentication data found');
+      }
+
+      const { storeUrl, consumerKey, consumerSecret } = authData.wooAuth;
+      if (!storeUrl || !consumerKey || !consumerSecret) {
+        throw new Error('Missing required WooCommerce credentials');
+      }
+
+      // Show loading state
+      auditResultsDiv.innerHTML = `
+        <div class="loading-container">
+          <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+          </div>
+          <p class="loading-text">Searching products...</p>
+        </div>
+      `;
+
+      console.log('Making search API request...');
+      
+      // Make the API request
+      const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/search`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-woo-store-url': storeUrl,
+          'x-woo-consumer-key': consumerKey,
+          'x-woo-consumer-secret': consumerSecret
+        },
+        body: JSON.stringify({ query })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to search products');
+      }
+
+      const data = await response.json();
+      console.log('Search response:', data);
+      
+      if (data.products && data.products.length > 0) {
+        displayProductsList(data.products, data.totalProducts || data.products.length, data.total_pages || 1, data.current_page || 1);
+      } else {
+        auditResultsDiv.innerHTML = `
+          <div class="no-results">
+            <p>No products found matching "${query}"</p>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error searching products:', error);
+      auditResultsDiv.innerHTML = `
+        <div class="error-container">
+          <div class="error-icon">⚠️</div>
+          <div class="error-message">
+            <h4>Error Searching Products</h4>
+            <p>${error.message || 'Failed to search products. Please try again.'}</p>
+          </div>
+        </div>
+      `;
+    }
   }
 })();

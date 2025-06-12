@@ -37,7 +37,7 @@ class WooAuth {
     // Initialize reset button with a delay to ensure DOM is ready
     setTimeout(() => {
       console.log('Delayed initialization of reset button...');
-      this.initializeResetButton();
+    this.initializeResetButton();
     }, 1000);
   }
 
@@ -74,17 +74,17 @@ class WooAuth {
   async generateUserId() {
     // Get or create a unique ID for this extension installation
     try {
-      const stored = localStorage.getItem('extensionId');
+    const stored = localStorage.getItem('extensionId');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.extensionId) {
           return parsed.extensionId;
         }
-      }
-      
-      const newId = 'ext_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-      localStorage.setItem('extensionId', JSON.stringify({ extensionId: newId }));
-      return newId;
+    }
+    
+    const newId = 'ext_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem('extensionId', JSON.stringify({ extensionId: newId }));
+    return newId;
     } catch (error) {
       console.error('Error generating userId:', error);
       return null;
@@ -118,7 +118,7 @@ class WooAuth {
       }
 
       // Store temporary data
-      localStorage.setItem('wooAuth', JSON.stringify({
+    localStorage.setItem('wooAuth', JSON.stringify({
         wooAuth: {
           storeUrl: shopUrl,
           userId: userId,
@@ -175,20 +175,20 @@ class WooAuth {
     try {
       // If userId is provided, we're in the initial authorization flow
       if (userId) {
-        const response = await fetch(`${this.API_URL}/woo/auth-status`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-woo-user-id': userId
-          }
-        });
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to check authorization status');
+      const response = await fetch(`${this.API_URL}/woo/auth-status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-woo-user-id': userId
         }
+      });
+      const data = await response.json();
 
-        if (data.success && data.isAuthenticated) {
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to check authorization status');
+      }
+
+      if (data.success && data.isAuthenticated) {
           // Store the new credentials if provided
           if (data.consumerKey && data.consumerSecret) {
             this.storeCredentials(data.store_url, data.consumerKey, data.consumerSecret);
@@ -393,33 +393,33 @@ class WooAuth {
         elements.authForm.style.display = isConnected ? 'none' : 'block';
 
         if (elements.authInfo) {
-          if (isConnected) {
+      if (isConnected) {
             elements.authInfo.innerHTML = `
-              <div class="connection-details">
-                <p style="color: #4CAF50; margin-bottom: 10px;">✓ Successfully connected to your WooCommerce store</p>
-                <p style="color: #666; font-size: 14px;">Connected to: ${shopUrl}</p>
-              </div>`;
-          } else {
+          <div class="connection-details">
+            <p style="color: #4CAF50; margin-bottom: 10px;">✓ Successfully connected to your WooCommerce store</p>
+            <p style="color: #666; font-size: 14px;">Connected to: ${shopUrl}</p>
+          </div>`;
+      } else {
             elements.authInfo.innerHTML = '<p>Enter your WooCommerce shop URL and click connect. You\'ll be redirected to your shop to authorize access.</p>';
-          }
-        }
+      }
+    }
 
         if (elements.shopUrlInput && shopUrl) {
           elements.shopUrlInput.value = shopUrl;
-        }
+    }
 
         // Get stored auth data
-        const auth = JSON.parse(localStorage.getItem('wooAuth'));
+    const auth = JSON.parse(localStorage.getItem('wooAuth'));
         
         // Dispatch auth changed event with complete auth data
-        document.dispatchEvent(new CustomEvent('wooAuthChanged', {
-          detail: { 
-            connected: isConnected,
+      document.dispatchEvent(new CustomEvent('wooAuthChanged', {
+        detail: { 
+          connected: isConnected,
             userId: auth?.wooAuth?.userId || null,
             storeUrl: shopUrl || auth?.wooAuth?.storeUrl,
             isConnected: isConnected
-          }
-        }));
+        }
+      }));
 
         // If connected, switch to audit tab
         if (isConnected) {
@@ -461,7 +461,7 @@ class WooAuth {
         if (confirm('Are you sure you want to reset the WooCommerce connection? This will require you to reconnect.')) {
           console.log('Reset confirmed, calling resetAuth...');
           try {
-            await this.resetAuth();
+          await this.resetAuth();
             console.log('Reset completed successfully');
           } catch (error) {
             console.error('Reset failed:', error);

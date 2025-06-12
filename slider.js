@@ -673,14 +673,15 @@ generate two reviews, and no nested categories or tags.
     }
   ],
   "reviewsScore": number (0-100),
-  "reviewsAnalysis": string
+  "reviewsAnalysis": string,
+  "globalScore": number (0-100),
+  "overallAnalysis": string,
+  "priorityImprovements": string[]
 
   
 }`;
 
-// "globalScore": number (0-100),
-//   "overallAnalysis": string,
-//   "priorityImprovements": string[]
+
     try {
       // Find the contenteditable div (ChatGPT's input box)
       const inputBox = document.querySelector('[contenteditable="true"]');

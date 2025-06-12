@@ -228,6 +228,175 @@
       return;
     }
 
+    // Add styles for product cards
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .product-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      }
+
+      .product-header {
+        position: relative;
+        background: #f8f9fa;
+        padding: 0;
+      }
+
+      .product-header img {
+        width: 100%;
+        height: 200px;
+        object-fit: contain;
+        background: #f8f9fa;
+        border-bottom: 1px solid #eee;
+      }
+
+      .product-status {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: #28a745;
+        color: white;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .product-info {
+        padding: 15px;
+      }
+
+      .product-info h3 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        line-height: 1.4;
+        height: 44px;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+
+      .product-meta {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 8px;
+      }
+
+      .product-price {
+        font-size: 16px;
+        font-weight: 600;
+        color: #2c5282;
+        margin-bottom: 8px;
+      }
+
+      .product-description {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 15px;
+        line-height: 1.5;
+        height: 63px;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+      }
+
+      .product-tags {
+        margin-bottom: 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .category-tag, .tag {
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .category-tag {
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+
+      .tag {
+        background: #f3e5f5;
+        color: #7b1fa2;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .generate-prompt-btn, .compare-btn {
+        flex: 1;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .generate-prompt-btn {
+        background: #4CAF50;
+        color: white;
+      }
+
+      .generate-prompt-btn:hover {
+        background: #43A047;
+      }
+
+      .compare-btn {
+        background: #2196F3;
+        color: white;
+      }
+
+      .compare-btn:hover {
+        background: #1E88E5;
+      }
+
+      .compare-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .audit-results {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 6px;
+        background: #f8f9fa;
+        display: none;
+      }
+    `;
+    document.head.appendChild(styleElement);
+
     // Create product cards
     auditResultsDiv.innerHTML = `
       <div class="products-grid">
@@ -235,15 +404,15 @@
           <div class="product-card" data-index="${i}" data-product-id="${p.id}">
             <div class="product-header">
               <img src="${p.images?.[0]?.src || 'https://via.placeholder.com/150'}" 
-                   alt="${p.title}"
-                   style="width: 100%; height: 150px; object-fit: contain; background: #f5f5f5;" />
+                   alt="${p.title || p.name}"
+                   loading="lazy" />
               <span class="product-status">${p.status || 'Active'}</span>
             </div>
             <div class="product-info">
-              <h3>${p.title}</h3>
+              <h3>${p.title || p.name}</h3>
               <p class="product-meta">SKU: ${p.sku || 'N/A'} | Stock: ${p.stock_quantity || 0}</p>
-              <p class="product-price">${p.price || '$0.00'}</p>
-              <p class="product-description">${p.shortDescription || p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
+              <p class="product-price">${p.price ? `$${p.price}` : '$0.00'}</p>
+              <p class="product-description">${p.short_description || p.description?.substring(0, 150) + '...' || 'No description available.'}</p>
               <div class="product-tags">
                 ${(p.categories || []).map(cat => `
                   <span class="category-tag">${typeof cat === 'object' ? cat.name : cat}</span>
@@ -253,8 +422,18 @@
                 `).join('')}
               </div>
               <div class="button-group">
-                <button class="generate-prompt-btn">Generate ChatGPT Prompt</button>
-                <button class="compare-btn" data-product-id="${p.id}" disabled>Compare Changes</button>
+                <button class="generate-prompt-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  </svg>
+                  Generate Audit
+                </button>
+                <button class="compare-btn" data-product-id="${p.id}" disabled>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M4 4l5 5"/>
+                  </svg>
+                  Compare
+                </button>
               </div>
               <div class="audit-results"></div>
             </div>

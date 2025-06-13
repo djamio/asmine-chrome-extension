@@ -649,6 +649,46 @@
     }
   }
 
+  // Function to extract JSON from ChatGPT's last response
+  function extractLastJSONFromChatGPT(validator = null) {
+    // Get all messages from the conversation
+    const messages = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+
+    // Start from the last assistant message and look for a JSON code block
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const codeBlocks = messages[i].querySelectorAll('pre code');
+
+      for (const code of codeBlocks) {
+        try {
+          // Attempt to parse the content as JSON
+          const text = code.textContent.trim();
+
+          // Use regex to isolate the JSON if extra characters exist before/after
+          const match = text.match(/{[\s\S]*}/);
+          if (match) {
+            const json = JSON.parse(match[0]);
+            console.log("Extracted JSON:", json);
+            
+            // If a validator function is provided, use it to check the JSON structure
+            if (validator && typeof validator === 'function') {
+              if (validator(json)) {
+                return json;
+              }
+            } else {
+              return json; // Return any valid JSON if no validator
+            }
+          }
+        } catch (e) {
+          // Not valid JSON, continue
+          continue;
+        }
+      }
+    }
+
+    console.warn("No valid JSON found in the assistant messages.");
+    return null;
+  }
+
   // Function to handle ChatGPT prompt generation and response
   async function handleGeneratePrompt(btn, product) {
     try {
@@ -755,130 +795,75 @@
         debounceTimer = setTimeout(() => {
           console.log('Processing final state after mutations');
           
-          // Try multiple selectors that might match ChatGPT's response
-          const selectors = [
-            '.markdown-content',
-            '[data-message-author-role="assistant"]',
-            '.prose',
-            '[data-testid="conversation-turn-"]'
-          ];
+          // Use the new extractLastJSONFromChatGPT function with validator
+          const parsed = extractLastJSONFromChatGPT((json) => {
+            return json && json.titleScore !== undefined && json.globalScore !== undefined;
+          });
           
-          let responseElement = null;
-          for (const selector of selectors) {
-            const elements = Array.from(document.querySelectorAll(selector));
-            if (elements.length > 0) {
-              // Pick the last element
-              responseElement = elements[elements.length - 1];
-              console.log('Found latest response element with selector:', selector);
-              break;
-            }
-          }
+          if (parsed) {
+            console.log('Found valid audit results JSON:', parsed);
+            
+            // Store the audit results and product data
+            const auditData = {
+              audit: parsed,
+              product: product,
+              timestamp: Date.now()
+            };
+            localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
 
-          if (responseElement) {
-            try {
-              console.log('Found ChatGPT response element');
-              const responseText = responseElement.textContent;
-              console.log('Full response text:', responseText);
-
-              // If no valid JSON in code blocks, try the more general approach
-              const jsonRegex = /\{(?:[^{}]|{[^{}]*})*\}/g;
-              const matches = responseText.match(jsonRegex);
-              console.log('Found JSON matches:', matches?.length);
-              
-              if (matches) {
-                // Try each match until we find valid JSON with the expected structure
-                for (const match of matches) {
-                  console.log('Trying to parse JSON match:', match);
-                  try {
-                    // Clean the JSON string before parsing
-                    const cleanJson = match
-                      .replace(/[\n\r]/g, '')  // Remove line breaks
-                      .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
-                      .trim();                 // Remove leading/trailing whitespace
-                    
-                    const parsed = JSON.parse(cleanJson);
-                    console.log('Successfully parsed JSON:', parsed);
-                    
-                    // Verify this is our audit results by checking required fields
-                    if (parsed.titleScore !== undefined) {
-                      console.log('Found valid audit results JSON');
-                      
-                      // Store the audit results and product data
-                      const auditData = {
-                        audit: parsed,
-                        product: product,
-                        timestamp: Date.now()
-                      };
-                      localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
-
-                      // Enable and attach event listener to compare button
-                      compareBtn.disabled = false;
-                      compareBtn.classList.remove('loading');
-                      compareBtn.addEventListener('click', async () => {
-                        // Create modal if it doesn't exist
-                        if (!document.getElementById('auditModal')) {
-                          createAuditModal();
-                        }
-                        
-                        // Get modal after ensuring it exists
-                        const modal = document.getElementById('auditModal');
-                        if (!modal) {
-                          console.error('Failed to create or find audit modal');
-                          return;
-                        }
-
-                        // Show modal
-                        const modalContent = modal.querySelector('.audit-modal');
-                        if (modalContent) {
-                          modalContent.style.display = 'block';
-                        }
-
-                        // Update modal content with fresh audit results
-                        updateModalContent(modal, product, parsed);
-                      });
-
-                      // Display the results summary
-                      const resultsDiv = productCard.querySelector('.audit-results');
-                      if (resultsDiv) {
-                        console.log('Displaying results summary');
-                        resultsDiv.innerHTML = `
-                          <div class="audit-summary">
-                            <h4>Audit Results</h4>
-                            <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
-                            <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
-                            <div class="priority-improvements">
-                              <h5>Priority Improvements:</h5>
-                              <ul>
-                                ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
-                              </ul>
-                            </div>
-                          </div>
-                        `;
-                      }
-
-                      // Reset generate button state
-                      btn.disabled = false;
-                      btn.textContent = 'Generate ChatGPT Prompt';
-
-                      // Disconnect the observer since we've found and processed the response
-                      observer.disconnect();
-                      break;
-                    } else {
-                      console.log('Found JSON but missing required fields. Available fields:', Object.keys(parsed));
-                    }
-                  } catch (error) {
-                    console.log('Invalid JSON match:', error.message);
-                    console.log('Attempted to parse:', match);
-                  }
-                }
-              } else {
-                console.log('No JSON matches found in response');
+            // Enable and attach event listener to compare button
+            compareBtn.disabled = false;
+            compareBtn.classList.remove('loading');
+            compareBtn.addEventListener('click', async () => {
+              // Create modal if it doesn't exist
+              if (!document.getElementById('auditModal')) {
+                createAuditModal();
               }
-            } catch (error) {
-              console.error('Error processing ChatGPT response:', error);
+              
+              // Get modal after ensuring it exists
+              const modal = document.getElementById('auditModal');
+              if (!modal) {
+                console.error('Failed to create or find audit modal');
+                return;
+              }
+
+              // Show modal
+              const modalContent = modal.querySelector('.audit-modal');
+              if (modalContent) {
+                modalContent.style.display = 'block';
+              }
+
+              // Update modal content with fresh audit results
+              updateModalContent(modal, product, parsed);
+            });
+
+            // Display the results summary
+            const resultsDiv = productCard.querySelector('.audit-results');
+            if (resultsDiv) {
+              console.log('Displaying results summary');
+              resultsDiv.innerHTML = `
+                <div class="audit-summary">
+                  <h4>Audit Results</h4>
+                  <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
+                  <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
+                  <div class="priority-improvements">
+                    <h5>Priority Improvements:</h5>
+                    <ul>
+                      ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+              `;
             }
+
+            // Reset generate button state
+            btn.disabled = false;
+            // btn.textContent = 'Generate ChatGPT Prompt';
+
+            // Disconnect the observer since we've found and processed the response
+            observer.disconnect();
           } else {
-            console.log('No response element found with any selector');
+            console.log('No valid audit JSON found yet, continuing to wait...');
           }
         }, 1000); // Wait 1 second after last mutation before processing
       });
@@ -2101,14 +2086,18 @@ Here are the product titles to analyze:
 
 ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
 
-Please format your response as follows for each product:
+  Please analyze all aspects and return a JSON response with the following structure
 
-Original Title: [title]
-Enhanced Title: [enhanced version]
-Improvements: [brief explanation]
-Score: [1-10]
-
-Please analyze each title and provide specific, actionable improvements.`;
+   {
+    "enhanced_titles": [
+        {
+            "original": "original title 1",
+            "enhanced": "enhanced title 1",
+            "improvements": "brief explanation of the improvements made",
+            "score": "1-10"
+        }
+    ]
+}`;
 
       try {
         // Find the contenteditable div (ChatGPT's input box)
@@ -2149,7 +2138,6 @@ Please analyze each title and provide specific, actionable improvements.`;
       }
 
       // Store the original titles for comparison
-      localStorage.setItem('bulkOriginalTitles', JSON.stringify(productTitles));
 
     } catch (error) {
       console.error('Error generating bulk prompt:', error);
@@ -2163,147 +2151,543 @@ Please analyze each title and provide specific, actionable improvements.`;
       }
     }
   }
+  
+
+  // Function to show a simple modal with custom content
+  function showModal(title, content) {
+    // Remove any existing modal
+    const existingModal = document.getElementById('bulkModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'bulkModal';
+    modal.innerHTML = `
+      <div class="bulk-modal">
+        <div class="bulk-modal-content">
+          <div class="modal-header">
+            <h2>${title}</h2>
+            <span class="close">&times;</span>
+          </div>
+          <div class="modal-body">
+            ${content}
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelBulkChanges">Cancel</button>
+            <button class="btn btn-primary" id="applyBulkChanges">
+              <i class="fas fa-save"></i> Apply Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Add styles
+    const styles = document.createElement('style');
+    styles.textContent = `
+      .bulk-modal {
+        display: block;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px);
+      }
+
+      .bulk-modal-content {
+        background-color: white;
+        margin: 3% auto;
+        padding: 0;
+        width: 90%;
+        max-width: 1200px;
+        border-radius: 12px;
+        position: relative;
+        max-height: 90vh;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        border: 1px solid #e1e5e9;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 30px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px 12px 0 0;
+      }
+
+      .modal-header h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+
+      .bulk-modal .close {
+        font-size: 28px;
+        cursor: pointer;
+        color: white;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.1);
+      }
+
+      .bulk-modal .close:hover {
+        opacity: 1;
+        background: rgba(255,255,255,0.2);
+      }
+
+      .modal-body {
+        padding: 30px;
+        max-height: 70vh;
+        overflow-y: auto;
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        padding: 20px 30px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #e1e5e9;
+        border-radius: 0 0 12px 12px;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background-color: #5a6268;
+        transform: translateY(-1px);
+      }
+
+      .bulk-comparison {
+        margin-top: 0;
+      }
+
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+
+      .table-header {
+        display: flex;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+        color: #495057;
+      }
+
+      .header-cell {
+        flex: 1;
+        padding: 16px 12px;
+        text-align: left;
+        border-right: 1px solid #dee2e6;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .header-cell:last-child {
+        border-right: none;
+      }
+
+      .comparison-row {
+        display: flex;
+        border-bottom: 1px solid #f1f3f4;
+        transition: background-color 0.2s;
+      }
+
+      .comparison-row:hover {
+        background-color: #f8f9fa;
+      }
+
+      .title-cell {
+        flex: 1;
+        padding: 16px 12px;
+        border-right: 1px solid #f1f3f4;
+        word-wrap: break-word;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .title-cell:last-child {
+        border-right: none;
+      }
+
+      .title-cell.original {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+      }
+
+      .title-cell.enhanced {
+        background-color: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        position: relative;
+      }
+
+      .title-cell.enhanced .editable-title {
+        width: 100%;
+        min-height: 60px;
+        padding: 8px 12px;
+        border: 2px solid #17a2b8;
+        border-radius: 6px;
+        font-size: 14px;
+        line-height: 1.4;
+        resize: vertical;
+        background-color: white;
+        transition: border-color 0.2s;
+      }
+
+      .title-cell.enhanced .editable-title:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+      }
+
+      .title-cell.improvements {
+        background-color: #d4edda;
+        border-left: 4px solid #28a745;
+        font-style: italic;
+        color: #155724;
+      }
+
+      .title-cell.score {
+        background-color: #f8d7da;
+        border-left: 4px solid #dc3545;
+        text-align: center;
+        font-weight: bold;
+        color: #721c24;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .score-badge {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        min-width: 40px;
+      }
+
+      .enhanced-label {
+        font-size: 11px;
+        color: #6c757d;
+        margin-bottom: 4px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .bulk-stats {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+        padding: 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+      }
+
+      .stat-item {
+        text-align: center;
+        flex: 1;
+      }
+
+      .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #495057;
+        display: block;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+      }
+
+      .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        border-radius: 12px;
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+
+    // Append modal and styles to body
+    document.body.appendChild(modal);
+    document.head.appendChild(styles);
+
+    // Add close functionality
+    const closeBtn = modal.querySelector('.close');
+    const cancelBtn = modal.querySelector('#cancelBulkChanges');
+    
+    const closeModal = () => {
+      modal.remove();
+      styles.remove();
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeModal);
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', closeModal);
+    }
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    // Add apply changes functionality
+    const applyBtn = modal.querySelector('#applyBulkChanges');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', async () => {
+        try {
+          // Show loading state
+          applyBtn.disabled = true;
+          applyBtn.innerHTML = '<div class="spinner"></div> Applying Changes...';
+          
+          // Collect all edited titles
+          const editedTitles = [];
+          const rows = modal.querySelectorAll('.comparison-row');
+          
+          rows.forEach((row, index) => {
+            const originalCell = row.querySelector('.title-cell.original');
+            const enhancedCell = row.querySelector('.title-cell.enhanced');
+            const editableInput = enhancedCell.querySelector('.editable-title');
+            
+            if (originalCell && editableInput) {
+              editedTitles.push({
+                index: index,
+                original: originalCell.textContent.trim(),
+                enhanced: editableInput.value.trim()
+              });
+            }
+          });
+
+          console.log('Applying bulk changes:', editedTitles);
+
+          // Call the bulk title changes API
+          await applyBulkTitleChanges(editedTitles);
+          
+          // Show success message
+          alert(`Successfully applied changes to ${editedTitles.length} titles!`);
+          closeModal();
+
+        } catch (error) {
+          console.error('Error applying bulk changes:', error);
+          alert('Failed to apply changes. Please try again.');
+        } finally {
+          // Reset button state
+          applyBtn.disabled = false;
+          applyBtn.innerHTML = '<i class="fas fa-save"></i> Apply Changes';
+        }
+      });
+    }
+  }
 
   // Handle bulk comparison
   async function handleBulkCompareTitles() {
-    const originalTitles = JSON.parse(localStorage.getItem('bulkOriginalTitles') || '[]');
-    const enhancedTitles = JSON.parse(localStorage.getItem('bulkEnhancedTitles') || '[]');
+    try {
+        console.log('Handling bulk comparison...');
+        const compareBtn = document.getElementById('compareBulkTitles');
+        
+        if (compareBtn) {
+            compareBtn.disabled = true;
+            compareBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Comparing...';
+        }
 
-    if (originalTitles.length === 0 || enhancedTitles.length === 0) {
-        alert('No titles to compare. Please generate enhanced titles first.');
-        return;
-    }
+        // Get the original titles
+        const originalTitles = JSON.parse(localStorage.getItem('bulkOriginalTitles') || '[]');
+        if (!originalTitles.length) {
+            throw new Error('No original titles found for comparison');
+        }
 
-    // Create modal container
-    const modal = document.createElement('div');
-    modal.className = 'bulk-compare-modal';
-    modal.innerHTML = `
-        <div class="bulk-compare-content">
-            <div class="bulk-compare-header">
-                <h2>Title Comparison</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="bulk-compare-body">
+        // Use the new extractLastJSONFromChatGPT function
+        const jsonResponse = extractLastJSONFromChatGPT((json) => {
+          return json && json.enhanced_titles && Array.isArray(json.enhanced_titles);
+        });
+        if (!jsonResponse) {
+            throw new Error('No enhanced titles found in ChatGPT response');
+        }
+
+        const enhancedTitles = jsonResponse.enhanced_titles;
+
+        if (!enhancedTitles.length) {
+            throw new Error('No enhanced titles found in the response');
+        }
+
+        // Create modal content
+        const modalContent = `
+            <div class="bulk-comparison">
+                <div class="bulk-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">${enhancedTitles.length}</span>
+                        <span class="stat-label">Titles</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${(enhancedTitles.reduce((sum, item) => sum + parseInt(item.score), 0) / enhancedTitles.length).toFixed(1)}</span>
+                        <span class="stat-label">Avg Score</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${enhancedTitles.filter(item => parseInt(item.score) >= 7).length}</span>
+                        <span class="stat-label">High Quality</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${enhancedTitles.filter(item => parseInt(item.score) <= 5).length}</span>
+                        <span class="stat-label">Needs Work</span>
+                    </div>
+                </div>
                 <div class="comparison-table">
                     <div class="table-header">
                         <div class="header-cell">Original Title</div>
-                        <div class="header-cell">Enhanced Title</div>
+                        <div class="header-cell">Enhanced Title (Editable)</div>
+                        <div class="header-cell">Improvements</div>
+                        <div class="header-cell">Score</div>
                     </div>
-                    ${originalTitles.map((original, index) => `
+                    ${enhancedTitles.map(item => `
                         <div class="comparison-row">
-                            <div class="title-cell original">${original}</div>
-                            <div class="title-cell enhanced">${enhancedTitles[index] || 'No enhanced title'}</div>
+                            <div class="title-cell original">${item.original}</div>
+                            <div class="title-cell enhanced">
+                                <div class="enhanced-label">Enhanced Version</div>
+                                <textarea class="editable-title" placeholder="Edit the enhanced title here...">${item.enhanced}</textarea>
+                            </div>
+                            <div class="title-cell improvements">${item.improvements}</div>
+                            <div class="title-cell score">
+                                <div class="score-badge">${item.score}/10</div>
+                            </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
-        </div>
-    `;
+        `;
 
-    // Add styles
-    const style = document.createElement('style');
-    style.textContent = `
-        .bulk-compare-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .bulk-compare-content {
-            background: white;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 1200px;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .bulk-compare-header {
-            padding: 16px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .bulk-compare-header h2 {
-            margin: 0;
-            font-size: 1.25rem;
-            color: #1f2937;
-        }
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #6b7280;
-            padding: 4px;
-        }
-        .close-modal:hover {
-            color: #1f2937;
-        }
-        .bulk-compare-body {
-            padding: 16px;
-            overflow-y: auto;
-        }
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .table-header {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            padding: 8px;
-            background: #f3f4f6;
-            border-radius: 4px;
-            margin-bottom: 8px;
-        }
-        .header-cell {
-            font-weight: 600;
-            color: #374151;
-        }
-        .comparison-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .title-cell {
-            padding: 8px;
-            border-radius: 4px;
-            background: #f9fafb;
-        }
-        .title-cell.original {
-            border-left: 4px solid #6b7280;
-        }
-        .title-cell.enhanced {
-            border-left: 4px solid #10b981;
-        }
-    `;
-    document.head.appendChild(style);
+        // Show modal
+        showModal('Bulk Title Comparison', modalContent);
 
-    // Add event listeners
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-        modal.remove();
-        style.remove();
-    });
-
-    // Close on outside click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-            style.remove();
+    } catch (error) {
+        console.error('Error comparing bulk titles:', error);
+        alert(error.message || 'Failed to compare titles. Please try again.');
+    } finally {
+        // Reset button state
+        const compareBtn = document.getElementById('compareBulkTitles');
+        if (compareBtn) {
+            compareBtn.disabled = false;
+            compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Titles';
         }
-    });
+    }
+}
 
-    // Add to document
-    document.body.appendChild(modal);
+  // TODO: Implement this function to call the backend API for bulk title updates
+  async function applyBulkTitleChanges(editedTitles) {
+    try {
+      console.log('Calling bulk title changes API with:', editedTitles);
+      
+      // Get current auth credentials
+      const auth = JSON.parse(localStorage.getItem('wooAuth') || '{}');
+      if (!auth.isConnected || !auth.storeUrl || !auth.consumerKey || !auth.consumerSecret) {
+        throw new Error('WooCommerce not connected. Please connect your store first.');
+      }
+
+      // TODO: Replace with actual API endpoint
+      const apiUrl = `${auth.storeUrl}/wp-json/wc/v3/products/bulk-update-titles`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + btoa(`${auth.consumerKey}:${auth.consumerSecret}`)
+        },
+        body: JSON.stringify({
+          titles: editedTitles,
+          timestamp: Date.now()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Bulk title changes applied successfully:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('Error applying bulk title changes:', error);
+      throw error;
+    }
   }
 })();

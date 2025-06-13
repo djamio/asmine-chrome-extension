@@ -525,18 +525,18 @@
           }
         });
         
-        return null;
-      }
+      return null;
+  }
 
       // Add loading state
-      auditResultsDiv.innerHTML = `
+    auditResultsDiv.innerHTML = `
         <div class="loading-container">
           <div class="loading-spinner">
             <div class="spinner-ring"></div>
-          </div>
-          <p class="loading-text">Loading WooCommerce products...</p>
         </div>
-      `;
+          <p class="loading-text">Loading WooCommerce products...</p>
+      </div>
+    `;
 
       // Get stored credentials
       const credentials = wooAuth.getStoredCredentials();
@@ -565,21 +565,21 @@
       if (data.products && data.products.length > 0) {
         displayProductsList(data.products, data.totalProducts, data.total_pages, page);
       } else {
-        auditResultsDiv.innerHTML = `
+    auditResultsDiv.innerHTML = `
           <div class="no-results">
             <p>No products found.</p>
-          </div>
-        `;
+      </div>
+    `;
       }
       return data;
     } catch (error) {
       console.error('Error fetching products:', error);
-      auditResultsDiv.innerHTML = `
-        <div style="text-align: center; padding: 20px;">
+        auditResultsDiv.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
           <p style="color: #dc3545;">Error loading products: ${error.message}</p>
           <button onclick="window.location.reload()" class="btn btn-primary">Retry</button>
-        </div>
-      `;
+          </div>
+        `;
       return null;
     }
   }
@@ -698,109 +698,109 @@
   async function handleGeneratePrompt(btn, product) {
     try {
       // Disable both buttons and show loading state
-      btn.disabled = true;
-      btn.textContent = 'Generating...';
-      const productCard = btn.closest('.product-card');
-      const compareBtn = productCard.querySelector('.compare-btn');
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+    const productCard = btn.closest('.product-card');
+    const compareBtn = productCard.querySelector('.compare-btn');
       if (compareBtn) {
-        compareBtn.disabled = true;
+    compareBtn.disabled = true;
         compareBtn.classList.add('loading');
       }
 
-      const prompt = `
-        Audit the following WooCommerce product and provide a comprehensive analysis:
-        
-        Product Details:
-        - Title: ${product.title}
-        - Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
+        const prompt = `
+Audit the following WooCommerce product and provide a comprehensive analysis:
+
+Product Details:
+- Title: ${product.title}
+- Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
         - Full Description: ${product.description && product.description.length ? product.description.slice(0, 300) : 'No description available'}
-        - Specifications: ${JSON.stringify(product.specifications || [])}
-        - Categories: ${JSON.stringify(product.categories || [])}
-        - Tags: ${JSON.stringify(product.tags || [])}
-        - Reviews Count: ${product.reviews_count || 0}
-        
+- Specifications: ${JSON.stringify(product.specifications || [])}
+- Categories: ${JSON.stringify(product.categories || [])}
+- Tags: ${JSON.stringify(product.tags || [])}
+- Reviews Count: ${product.reviews_count || 0}
+
          make sure you return the response in the same language as the product.
         generate 5 reviews, and no nested categories or tags. for description please generate an advanced html content 
         Please analyze all aspects and return a JSON response with the following structure:
-        {
-          "titleScore": number (0-100),
-          "titleAnalysis": string,
-          "newTitle": string,
-          "shortDescriptionScore": number (0-100),
-          "shortDescriptionAnalysis": string,
-          "newShortDescription": string,
-          "descriptionScore": number (0-100),
-          "descriptionAnalysis": string,
-          "newDescription": string,
-          "specificationsScore": number (0-100),
-          "specificationsAnalysis": string,
-          "suggestedSpecs": string[],
-          "categoriesScore": number (0-100),
-          "categoriesAnalysis": string,
-          "suggestedCategories": string[],
-          "tagsScore": number (0-100),
-          "tagsAnalysis": string,
-          "suggestedTags": string[],
-          "suggestedReviews": [
-            {
-              "review": string,
-              "rating": number (1-5),
-              "date": string (ISO format: YYYY-MM-DD),
-              "author": string
-            }
-          ],
-          "reviewsScore": number (0-100),
+{
+  "titleScore": number (0-100),
+  "titleAnalysis": string,
+  "newTitle": string,
+  "shortDescriptionScore": number (0-100),
+  "shortDescriptionAnalysis": string,
+  "newShortDescription": string,
+  "descriptionScore": number (0-100),
+  "descriptionAnalysis": string,
+  "newDescription": string,
+  "specificationsScore": number (0-100),
+  "specificationsAnalysis": string,
+  "suggestedSpecs": string[],
+  "categoriesScore": number (0-100),
+  "categoriesAnalysis": string,
+  "suggestedCategories": string[],
+  "tagsScore": number (0-100),
+  "tagsAnalysis": string,
+  "suggestedTags": string[],
+  "suggestedReviews": [
+    {
+      "review": string,
+      "rating": number (1-5),
+      "date": string (ISO format: YYYY-MM-DD),
+      "author": string
+    }
+  ],
+  "reviewsScore": number (0-100),
           "reviewsAnalysis": string,
           "globalScore": number (0-100),
           "overallAnalysis": string,
           "priorityImprovements": string[]
         } Please analyze all aspects and return a JSON response with the defined structure:`;
 
-      try {
-        // Find the contenteditable div (ChatGPT's input box)
-        const inputBox = document.querySelector('[contenteditable="true"]');
-        if (inputBox) {
-          // Focus the input box
-          inputBox.focus();
+    try {
+      // Find the contenteditable div (ChatGPT's input box)
+      const inputBox = document.querySelector('[contenteditable="true"]');
+      if (inputBox) {
+        // Focus the input box
+        inputBox.focus();
 
-          // Insert the prompt using execCommand
-          document.execCommand("insertText", false, prompt);
+        // Insert the prompt using execCommand
+        document.execCommand("insertText", false, prompt);
 
-          // Find and click the send button after a short delay
-          setTimeout(() => {
-            const sendButton = document.querySelector('[data-testid="send-button"]');
-            if (sendButton) {
-              sendButton.click();
-            }
-          }, 100);
-        }
-      } catch (error) {
-        console.error('Error inserting prompt:', error);
-        // Fallback: try the textarea approach
-        const textarea = document.querySelector('#prompt-textarea');
-        if (textarea) {
-          textarea.value = prompt;
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          textarea.focus();
+        // Find and click the send button after a short delay
+        setTimeout(() => {
           const sendButton = document.querySelector('[data-testid="send-button"]');
           if (sendButton) {
             sendButton.click();
           }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Error inserting prompt:', error);
+      // Fallback: try the textarea approach
+      const textarea = document.querySelector('#prompt-textarea');
+      if (textarea) {
+        textarea.value = prompt;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        textarea.focus();
+        const sendButton = document.querySelector('[data-testid="send-button"]');
+        if (sendButton) {
+          sendButton.click();
         }
       }
+    }
 
-      // Listen for ChatGPT response
-      let debounceTimer;
-      const observer = new MutationObserver((mutations) => {
-        console.log('MutationObserver triggered, mutations:', mutations.length);
+    // Listen for ChatGPT response
+    let debounceTimer;
+    const observer = new MutationObserver((mutations) => {
+      console.log('MutationObserver triggered, mutations:', mutations.length);
+      
+      // Clear any existing timer
+      clearTimeout(debounceTimer);
+      
+      // Set a new timer to process the latest state
+      debounceTimer = setTimeout(() => {
+        console.log('Processing final state after mutations');
         
-        // Clear any existing timer
-        clearTimeout(debounceTimer);
-        
-        // Set a new timer to process the latest state
-        debounceTimer = setTimeout(() => {
-          console.log('Processing final state after mutations');
-          
           // Use the new extractLastJSONFromChatGPT function with validator
           const parsed = extractLastJSONFromChatGPT((json) => {
             return json && json.titleScore !== undefined && json.globalScore !== undefined;
@@ -808,59 +808,59 @@
           
           if (parsed) {
             console.log('Found valid audit results JSON:', parsed);
-            
-            // Store the audit results and product data
-            const auditData = {
-              audit: parsed,
-              product: product,
-              timestamp: Date.now()
-            };
-            localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
+                    
+                    // Store the audit results and product data
+                    const auditData = {
+                      audit: parsed,
+                      product: product,
+                      timestamp: Date.now()
+                    };
+                    localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
 
-            // Enable and attach event listener to compare button
-            compareBtn.disabled = false;
+                    // Enable and attach event listener to compare button
+                    compareBtn.disabled = false;
             compareBtn.classList.remove('loading');
-            compareBtn.addEventListener('click', async () => {
-              // Create modal if it doesn't exist
-              if (!document.getElementById('auditModal')) {
-                createAuditModal();
-              }
-              
-              // Get modal after ensuring it exists
-              const modal = document.getElementById('auditModal');
-              if (!modal) {
-                console.error('Failed to create or find audit modal');
-                return;
-              }
+                    compareBtn.addEventListener('click', async () => {
+                      // Create modal if it doesn't exist
+                      if (!document.getElementById('auditModal')) {
+                        createAuditModal();
+                      }
+                      
+                      // Get modal after ensuring it exists
+                      const modal = document.getElementById('auditModal');
+                      if (!modal) {
+                        console.error('Failed to create or find audit modal');
+                        return;
+                      }
 
-              // Show modal
-              const modalContent = modal.querySelector('.audit-modal');
-              if (modalContent) {
-                modalContent.style.display = 'block';
-              }
+                      // Show modal
+                      const modalContent = modal.querySelector('.audit-modal');
+                      if (modalContent) {
+                        modalContent.style.display = 'block';
+                      }
 
-              // Update modal content with fresh audit results
-              updateModalContent(modal, product, parsed);
-            });
+                      // Update modal content with fresh audit results
+                      updateModalContent(modal, product, parsed);
+                    });
 
-            // Display the results summary
-            const resultsDiv = productCard.querySelector('.audit-results');
-            if (resultsDiv) {
-              console.log('Displaying results summary');
-              resultsDiv.innerHTML = `
-                <div class="audit-summary">
-                  <h4>Audit Results</h4>
-                  <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
-                  <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
-                  <div class="priority-improvements">
-                    <h5>Priority Improvements:</h5>
-                    <ul>
-                      ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
-                    </ul>
-                  </div>
-                </div>
-              `;
-            }
+                    // Display the results summary
+                    const resultsDiv = productCard.querySelector('.audit-results');
+                    if (resultsDiv) {
+                      console.log('Displaying results summary');
+                      resultsDiv.innerHTML = `
+                    <div class="audit-summary">
+                      <h4>Audit Results</h4>
+                          <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
+                          <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
+                          <div class="priority-improvements">
+                      <h5>Priority Improvements:</h5>
+                      <ul>
+                              ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
+                      </ul>
+                          </div>
+                    </div>
+                  `;
+                    }
 
             // Reset generate button state
             btn.disabled = false;
@@ -868,40 +868,40 @@
 
             // Disconnect the observer since we've found and processed the response
             observer.disconnect();
-          } else {
+                  } else {
             console.log('No valid audit JSON found yet, continuing to wait...');
-          }
-        }, 1000); // Wait 1 second after last mutation before processing
-      });
-
-      // Start observing ChatGPT's response area
-      console.log('Setting up observer');
-      const possibleTargets = [
-        '.chat-content',
-        '[data-testid="conversation-main"]',
-        'main'
-      ];
-
-      let targetNode = null;
-      for (const selector of possibleTargets) {
-        const element = document.querySelector(selector);
-        if (element) {
-          console.log('Found target node with selector:', selector);
-          targetNode = element;
-          break;
         }
-      }
+      }, 1000); // Wait 1 second after last mutation before processing
+    });
 
-      if (targetNode) {
-        console.log('Starting observation of target node');
-        observer.observe(targetNode, { 
-          childList: true,
-          subtree: true,
-          characterData: true,
-          characterDataOldValue: true
-        });
-      } else {
-        console.error('Could not find any suitable target node for observation');
+    // Start observing ChatGPT's response area
+    console.log('Setting up observer');
+    const possibleTargets = [
+      '.chat-content',
+      '[data-testid="conversation-main"]',
+      'main'
+    ];
+
+    let targetNode = null;
+    for (const selector of possibleTargets) {
+      const element = document.querySelector(selector);
+      if (element) {
+        console.log('Found target node with selector:', selector);
+        targetNode = element;
+        break;
+      }
+    }
+
+    if (targetNode) {
+      console.log('Starting observation of target node');
+      observer.observe(targetNode, { 
+        childList: true,
+        subtree: true,
+        characterData: true,
+        characterDataOldValue: true
+      });
+    } else {
+      console.error('Could not find any suitable target node for observation');
         // Reset button states if we couldn't find the target node
         btn.disabled = false;
         btn.textContent = 'Generate ChatGPT Prompt';
@@ -913,8 +913,8 @@
 
     } catch (error) {
       console.error('Error in handleGeneratePrompt:', error);
-      btn.disabled = false;
-      btn.textContent = 'Generate ChatGPT Prompt';
+                btn.disabled = false;
+                btn.textContent = 'Generate ChatGPT Prompt';
       if (compareBtn) {
         compareBtn.disabled = false;
         compareBtn.classList.remove('loading');
@@ -922,8 +922,8 @@
     }
   }
 
-  // Helper function to format arrays as tags
-  function formatAsTags(items, className) {
+   // Helper function to format arrays as tags
+   function formatAsTags(items, className) {
     console.log(`Formatting ${className}:`, items);
     
     if (!Array.isArray(items) || items.length === 0) {
@@ -1026,7 +1026,7 @@
     console.log('Final parsed reviews:', reviews);
     return reviews;
   }
-
+  
   // Function to handle modal updates
   function updateModalContent(modal, product, auditResults) {
     if (!modal || !product || !auditResults) {
@@ -1071,7 +1071,7 @@
         </div>
       `;
     }
-
+   
     // Update title tab
     const titleTab = modal.querySelector('#tab-title');
     if (titleTab) {
@@ -1441,7 +1441,7 @@
 
         // Initialize auditResultsDiv
         auditResultsDiv = document.getElementById('auditResults');
-
+        
         // Wait for all elements to be ready before initializing WooAuth
         return new Promise((resolve) => {
           const checkElements = () => {
@@ -1477,8 +1477,11 @@
           currentAuth = { isConnected: event.detail.connected };
           if (event.detail.connected && shouldLoadProducts()) {
             console.log('Connected and on audit tab, loading products');
-            renderPage();
+        renderPage();
           }
+          
+          // Check authentication status and update connection notice
+          checkAuthStatus();
         });
 
         // Check if we should load products immediately
@@ -1488,6 +1491,20 @@
           currentAuth = auth.wooAuth;
           renderPage();
         }
+        
+        // Check authentication status and show connection notice if needed
+        checkAuthStatus();
+        
+        // Add event listener for "Go to Connection" button
+        const goToConnectionBtn = document.getElementById('goToConnection');
+        console.log('Looking for goToConnection button:', !!goToConnectionBtn);
+        if (goToConnectionBtn) {
+          goToConnectionBtn.addEventListener('click', handleGoToConnection);
+          console.log('Event listener attached to goToConnection button');
+        } else {
+          console.log('goToConnection button not found');
+        }
+        
         initializeCollapsibleSection();
       })
       .catch(error => console.error('Error injecting slider:', error));
@@ -3240,9 +3257,58 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
     modal.style.display = 'block';
   }
 
+  // Custom notification system
+  function showNotification(type, title, message, duration = 5000) {
+    const container = document.getElementById('notificationContainer');
+    if (!container) return;
+
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    const iconMap = {
+      success: 'fas fa-check',
+      error: 'fas fa-exclamation-triangle',
+      warning: 'fas fa-exclamation-circle'
+    };
+
+    notification.innerHTML = `
+      <div class="notification-icon">
+        <i class="${iconMap[type] || 'fas fa-info'}"></i>
+      </div>
+      <div class="notification-content">
+        <div class="notification-title">${title}</div>
+        <div class="notification-message">${message}</div>
+      </div>
+      <button class="notification-close" onclick="this.parentElement.remove()">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+
+    container.appendChild(notification);
+
+    // Trigger animation
+    setTimeout(() => {
+      notification.classList.add('show');
+    }, 10);
+
+    // Auto remove after duration
+    if (duration > 0) {
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+          if (notification.parentElement) {
+            notification.remove();
+          }
+        }, 300);
+      }, duration);
+    }
+  }
+
   // Function to apply bulk description changes
   async function applyBulkDescChanges() {
     const modal = document.getElementById('bulkDescModal');
+    const applyButton = document.getElementById('applyDescChanges');
+    const loadingOverlay = document.getElementById('bulkDescLoadingOverlay');
     const textareas = modal.querySelectorAll('textarea[data-field="enhanced"]');
     const updates = [];
 
@@ -3258,8 +3324,18 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
     });
 
     if (updates.length === 0) {
-      alert('No changes to apply.');
+      showNotification('warning', 'No Changes', 'No changes to apply. Please edit some descriptions first.');
       return;
+    }
+
+    // Show loading overlay
+    if (loadingOverlay) {
+      loadingOverlay.style.display = 'flex';
+    }
+
+    // Disable apply button
+    if (applyButton) {
+      applyButton.disabled = true;
     }
 
     try {
@@ -3286,7 +3362,7 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
       });
 
       if (response.ok) {
-        alert(`Successfully updated ${updates.length} product descriptions!`);
+        showNotification('success', 'Success!', `Successfully updated ${updates.length} product descriptions!`);
         modal.style.display = 'none';
         // Refresh the products list
         if (typeof loadProducts === 'function') {
@@ -3304,10 +3380,207 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
       ).join('\n');
       
       navigator.clipboard.writeText(updatesText).then(() => {
-        alert(`Error applying changes. Updates have been copied to clipboard.\n\n${updates.length} descriptions ready for manual update.`);
+        showNotification('warning', 'Updates Copied', `${updates.length} descriptions have been copied to clipboard for manual update.`);
       }).catch(() => {
-        alert(`Error applying changes. Please copy the following updates manually:\n\n${updatesText}`);
+        showNotification('error', 'Error', `Failed to apply changes. Please copy the updates manually.`);
       });
+    } finally {
+      // Hide loading overlay
+      if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+      }
+
+      // Reset button state
+      if (applyButton) {
+        applyButton.disabled = false;
+      }
     }
+  }
+
+  // Check authentication status and show connection notice if needed
+  function checkAuthStatus() {
+    const authData = localStorage.getItem('wooAuth');
+    const connectionNotice = document.getElementById('connectionNotice');
+    
+    if (!authData || !JSON.parse(authData).wooAuth) {
+      if (connectionNotice) {
+        connectionNotice.style.display = 'block';
+      }
+    } else {
+      if (connectionNotice) {
+        connectionNotice.style.display = 'none';
+      }
+    }
+  }
+
+  // Handle "Go to Connection" button click
+  function handleGoToConnection() {
+    console.log('handleGoToConnection called');
+    const connectionTab = document.getElementById('tab-connection');
+    const auditTab = document.getElementById('tab-audit');
+    const connectionTabBtn = document.querySelector('[data-tab="connection"]');
+    const auditTabBtn = document.querySelector('[data-tab="audit"]');
+    
+    console.log('Found elements:', {
+      connectionTab: !!connectionTab,
+      auditTab: !!auditTab,
+      connectionTabBtn: !!connectionTabBtn,
+      auditTabBtn: !!auditTabBtn
+    });
+    
+    if (connectionTab && auditTab && connectionTabBtn && auditTabBtn) {
+      // Switch to connection tab
+      auditTab.style.display = 'none';
+      connectionTab.style.display = 'block';
+      
+      // Update tab button states
+      auditTabBtn.classList.remove('active');
+      connectionTabBtn.classList.add('active');
+      console.log('Successfully switched to connection tab');
+    } else {
+      console.log('Missing required elements for tab switching');
+    }
+  }
+
+  // Add event listener for "Go to Connection" button
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'goToConnection') {
+      handleGoToConnection();
+    }
+  });
+
+  // Check auth status when slider is injected
+  function injectSlider() {
+    console.log('Starting slider injection...');
+    return fetch(chrome.runtime.getURL('slider.html'))
+      .then(response => response.text())
+      .then(html => {
+        console.log('Slider HTML fetched');
+        const container = document.createElement('div');
+        container.innerHTML = html;
+        document.body.appendChild(container);
+        console.log('Slider container added to DOM');
+
+        // Add link to external CSS file
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = chrome.runtime.getURL('styles.css');
+        document.head.appendChild(cssLink);
+
+        // Get slider elements
+        const slider = document.querySelector('.my-slider');
+        console.log('Slider found:', !!slider);
+
+        // Open slider by default
+        if (slider) {
+          slider.classList.add('open');
+          document.body.classList.add('slider-open');
+        }
+
+        // Keep close button functionality
+        slider.querySelector('.my-slider-close').addEventListener('click', () => {
+          slider.classList.remove('open');
+          document.body.classList.remove('slider-open');
+        });
+
+        // Add tab switching functionality
+        const tabButtons = document.querySelectorAll('.my-slider-tab-btn');
+        const tabContents = document.querySelectorAll('.my-slider-tab-content');
+        console.log('Number of tab buttons found:', tabButtons.length);
+        console.log('Number of tab contents found:', tabContents.length);
+
+        tabButtons.forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const target = btn.getAttribute('data-tab');
+            console.log('Tab clicked:', target);
+            
+            // Update active state of buttons
+            tabButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Show selected content
+            tabContents.forEach(content => content.style.display = 'none');
+            const targetContent = document.getElementById(`tab-${target}`);
+            if (targetContent) {
+              targetContent.style.display = 'block';
+              
+              // If switching to audit tab and we're connected, load products
+              if (target === 'audit' && currentAuth?.isConnected) {
+                console.log('Loading products for audit tab');
+                // renderPage();
+              }
+            }
+          });
+        });
+
+        // Initialize auditResultsDiv
+        auditResultsDiv = document.getElementById('auditResults');
+
+        // Wait for all elements to be ready before initializing WooAuth
+        return new Promise((resolve) => {
+          const checkElements = () => {
+            if (checkRequiredElements()) {
+              console.log('All elements ready, initializing WooAuth');
+              if (!window.wooAuth) {
+                window.wooAuth = new WooAuth();
+              }
+              resolve();
+            } else {
+              console.log('Elements not ready, retrying in 100ms');
+              setTimeout(checkElements, 100);
+            }
+          };
+          checkElements();
+        });
+      })
+      .then(() => {
+        // Add event listeners after WooAuth is initialized
+        const authorizeButton = document.getElementById('authorizeWoo');
+        if (authorizeButton) {
+          console.log('Adding click listener to authorize button');
+          authorizeButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Authorize button clicked');
+            window.wooAuth?.authorize();
+          });
+        }
+
+        // Listen for auth changes
+        document.addEventListener('wooAuthChanged', (event) => {
+          console.log('Auth state changed:', event.detail);
+          currentAuth = { isConnected: event.detail.connected };
+          if (event.detail.connected && shouldLoadProducts()) {
+            console.log('Connected and on audit tab, loading products');
+            renderPage();
+          }
+          
+          // Check authentication status and update connection notice
+          checkAuthStatus();
+        });
+
+        // Check if we should load products immediately
+        const auth = JSON.parse(localStorage.getItem('wooAuth'));
+        if (auth?.wooAuth?.isConnected && shouldLoadProducts()) {
+          console.log('Already connected and on audit tab, loading products');
+          currentAuth = auth.wooAuth;
+          renderPage();
+        }
+        
+        // Check authentication status and show connection notice if needed
+        checkAuthStatus();
+        
+        // Add event listener for "Go to Connection" button
+        const goToConnectionBtn = document.getElementById('goToConnection');
+        console.log('Looking for goToConnection button:', !!goToConnectionBtn);
+        if (goToConnectionBtn) {
+          goToConnectionBtn.addEventListener('click', handleGoToConnection);
+          console.log('Event listener attached to goToConnection button');
+        } else {
+          console.log('goToConnection button not found');
+        }
+        
+        initializeCollapsibleSection();
+      })
+      .catch(error => console.error('Error injecting slider:', error));
   }
 })();

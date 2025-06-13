@@ -141,6 +141,11 @@
                 <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
+            <button id="clearSearch" class="clear-search-button" style="display: none;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </div>
       </div>
         <div id="auditResults"></div>
@@ -655,6 +660,25 @@
 
   .search-button:hover {
     background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  }
+
+  .clear-search-button {
+    padding: 14px 20px;
+    background: #f8f9fa;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 1px solid #e8eaed;
+  }
+
+  .clear-search-button:hover {
+    background: #e9ecef;
+    color: #495057;
+  }
+
+  .clear-search-button:active {
+    background: #dee2e6;
   }
 
   /* Products Grid */

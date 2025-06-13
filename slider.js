@@ -2184,7 +2184,8 @@ Here are the product titles to analyze:
 
 ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
 
-  Please analyze all aspects and return a JSON response with the following structure
+           make sure you return the response in the same language as the product.
+Please analyze all aspects and return a JSON response with the following structure
 
    {
     "enhanced_titles": [
@@ -2997,6 +2998,7 @@ Here are the product short descriptions to analyze:
 
 ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${shortDescription}`).join('\n')}
 
+         make sure you return the response in the same language as the product.
   Please analyze all aspects and return a JSON response with the following structure
 
    {

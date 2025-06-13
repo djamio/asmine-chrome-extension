@@ -307,6 +307,8 @@
 
       .product-info {
         padding: 15px;
+        display: flex;
+        flex-direction: column;
       }
 
       .product-info h3 {
@@ -375,6 +377,8 @@
         display: flex;
         gap: 10px;
         margin-top: 15px;
+        flex-direction: row;
+        align-items: stretch;
       }
 
       .generate-prompt-btn, .compare-btn {
@@ -390,6 +394,7 @@
         align-items: center;
         justify-content: center;
         gap: 6px;
+        min-width: 0;
       }
 
       .generate-prompt-btn {
@@ -714,8 +719,9 @@
         - Tags: ${JSON.stringify(product.tags || [])}
         - Reviews Count: ${product.reviews_count || 0}
         
-        Please analyze all aspects and return a JSON response with the following structure: make sure you return the response in the same language as the product.
+         make sure you return the response in the same language as the product.
         generate 5 reviews, and no nested categories or tags. for description please generate an advanced html content 
+        Please analyze all aspects and return a JSON response with the following structure:
         {
           "titleScore": number (0-100),
           "titleAnalysis": string,
@@ -748,7 +754,7 @@
           "globalScore": number (0-100),
           "overallAnalysis": string,
           "priorityImprovements": string[]
-        }`;
+        } Please analyze all aspects and return a JSON response with the defined structure:`;
 
       try {
         // Find the contenteditable div (ChatGPT's input box)
@@ -3157,9 +3163,10 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
           font-weight: 500;
         `;
         
-        const bulkActions = document.querySelector('.bulk-actions');
-        if (bulkActions) {
-          bulkActions.appendChild(successMessage);
+        // Find the specific bulk-actions container for descriptions
+        const descriptionSection = document.querySelector('.bulk-description-update .bulk-actions');
+        if (descriptionSection) {
+          descriptionSection.appendChild(successMessage);
           
           // Remove success message after 5 seconds
           setTimeout(() => {
@@ -3167,6 +3174,8 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
               successMessage.remove();
             }
           }, 5000);
+        } else {
+          console.warn('Could not find description bulk-actions container');
         }
       }
       

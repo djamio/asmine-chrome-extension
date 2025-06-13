@@ -188,6 +188,31 @@
       margin-bottom: 8px;
       color: #666;
     }
+
+    .compare-btn.loading {
+      position: relative;
+      color: transparent;
+    }
+
+    .compare-btn.loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin: -8px 0 0 -8px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: button-spin 0.8s linear infinite;
+    }
+
+    @keyframes button-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   `;
 
   // Add styles to the document
@@ -623,270 +648,288 @@
 
   // Function to handle ChatGPT prompt generation and response
   async function handleGeneratePrompt(btn, product) {
-        btn.disabled = true;
-        btn.textContent = 'Generating...';
-
-    // Find the compare button for this product
-    const productCard = btn.closest('.product-card');
-    const compareBtn = productCard.querySelector('.compare-btn');
-    compareBtn.disabled = true;
-
-        const prompt = `
-Audit the following WooCommerce product and provide a comprehensive analysis:
-
-Product Details:
-- Title: ${product.title}
-- Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
-- Full Description: ${product.description && product.description.length ? product.description.slice(0, 200) : 'No description available'}
-- Specifications: ${JSON.stringify(product.specifications || [])}
-- Categories: ${JSON.stringify(product.categories || [])}
-- Tags: ${JSON.stringify(product.tags || [])}
-- Reviews Count: ${product.reviews_count || 0}
-
-Please analyze all aspects and return a JSON response with the following structure: make sure you return the response in the same language as the product.
-generate two reviews, and no nested categories or tags.
-{
-  "titleScore": number (0-100),
-  "titleAnalysis": string,
-  "newTitle": string,
-  "shortDescriptionScore": number (0-100),
-  "shortDescriptionAnalysis": string,
-  "newShortDescription": string,
-  "descriptionScore": number (0-100),
-  "descriptionAnalysis": string,
-  "newDescription": string,
-  "specificationsScore": number (0-100),
-  "specificationsAnalysis": string,
-  "suggestedSpecs": string[],
-  "categoriesScore": number (0-100),
-  "categoriesAnalysis": string,
-  "suggestedCategories": string[],
-  "tagsScore": number (0-100),
-  "tagsAnalysis": string,
-  "suggestedTags": string[],
-  "suggestedReviews": [
-    {
-      "review": string,
-      "rating": number (1-5),
-      "date": string (ISO format: YYYY-MM-DD),
-      "author": string
-    }
-  ],
-  "reviewsScore": number (0-100),
-  "reviewsAnalysis": string,
-  "globalScore": number (0-100),
-  "overallAnalysis": string,
-  "priorityImprovements": string[]
-
-  
-}`;
-
-
     try {
-      // Find the contenteditable div (ChatGPT's input box)
-      const inputBox = document.querySelector('[contenteditable="true"]');
-      if (inputBox) {
-        // Focus the input box
-        inputBox.focus();
+      // Disable both buttons and show loading state
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      const productCard = btn.closest('.product-card');
+      const compareBtn = productCard.querySelector('.compare-btn');
+      if (compareBtn) {
+        compareBtn.disabled = true;
+        compareBtn.classList.add('loading');
+      }
 
-        // Insert the prompt using execCommand
-        document.execCommand("insertText", false, prompt);
+      const prompt = `
+        Audit the following WooCommerce product and provide a comprehensive analysis:
+        
+        Product Details:
+        - Title: ${product.title}
+        - Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
+        - Full Description: ${product.description && product.description.length ? product.description.slice(0, 200) : 'No description available'}
+        - Specifications: ${JSON.stringify(product.specifications || [])}
+        - Categories: ${JSON.stringify(product.categories || [])}
+        - Tags: ${JSON.stringify(product.tags || [])}
+        - Reviews Count: ${product.reviews_count || 0}
+        
+        Please analyze all aspects and return a JSON response with the following structure: make sure you return the response in the same language as the product.
+        generate two reviews, and no nested categories or tags. for description please generate a nice html content 
+        {
+          "titleScore": number (0-100),
+          "titleAnalysis": string,
+          "newTitle": string,
+          "shortDescriptionScore": number (0-100),
+          "shortDescriptionAnalysis": string,
+          "newShortDescription": string,
+          "descriptionScore": number (0-100),
+          "descriptionAnalysis": string,
+          "newDescription": string,
+          "specificationsScore": number (0-100),
+          "specificationsAnalysis": string,
+          "suggestedSpecs": string[],
+          "categoriesScore": number (0-100),
+          "categoriesAnalysis": string,
+          "suggestedCategories": string[],
+          "tagsScore": number (0-100),
+          "tagsAnalysis": string,
+          "suggestedTags": string[],
+          "suggestedReviews": [
+            {
+              "review": string,
+              "rating": number (1-5),
+              "date": string (ISO format: YYYY-MM-DD),
+              "author": string
+            }
+          ],
+          "reviewsScore": number (0-100),
+          "reviewsAnalysis": string,
+          "globalScore": number (0-100),
+          "overallAnalysis": string,
+          "priorityImprovements": string[]
+        }`;
 
-        // Find and click the send button after a short delay
-        setTimeout(() => {
+      try {
+        // Find the contenteditable div (ChatGPT's input box)
+        const inputBox = document.querySelector('[contenteditable="true"]');
+        if (inputBox) {
+          // Focus the input box
+          inputBox.focus();
+
+          // Insert the prompt using execCommand
+          document.execCommand("insertText", false, prompt);
+
+          // Find and click the send button after a short delay
+          setTimeout(() => {
+            const sendButton = document.querySelector('[data-testid="send-button"]');
+            if (sendButton) {
+              sendButton.click();
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error inserting prompt:', error);
+        // Fallback: try the textarea approach
+        const textarea = document.querySelector('#prompt-textarea');
+        if (textarea) {
+          textarea.value = prompt;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea.focus();
           const sendButton = document.querySelector('[data-testid="send-button"]');
           if (sendButton) {
             sendButton.click();
           }
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Error inserting prompt:', error);
-      // Fallback: try the textarea approach
-      const textarea = document.querySelector('#prompt-textarea');
-      if (textarea) {
-        textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        textarea.focus();
-        const sendButton = document.querySelector('[data-testid="send-button"]');
-        if (sendButton) {
-          sendButton.click();
         }
       }
-    }
 
-    // Listen for ChatGPT response
-    let debounceTimer;
-    const observer = new MutationObserver((mutations) => {
-      console.log('MutationObserver triggered, mutations:', mutations.length);
-      
-      // Clear any existing timer
-      clearTimeout(debounceTimer);
-      
-      // Set a new timer to process the latest state
-      debounceTimer = setTimeout(() => {
-        console.log('Processing final state after mutations');
+      // Listen for ChatGPT response
+      let debounceTimer;
+      const observer = new MutationObserver((mutations) => {
+        console.log('MutationObserver triggered, mutations:', mutations.length);
         
-        // Try multiple selectors that might match ChatGPT's response
-        const selectors = [
-          '.markdown-content',
-          '[data-message-author-role="assistant"]',
-          '.prose',
-          '[data-testid="conversation-turn-"]'
-        ];
+        // Clear any existing timer
+        clearTimeout(debounceTimer);
         
-        let responseElement = null;
-        for (const selector of selectors) {
-          const elements = Array.from(document.querySelectorAll(selector));
-          if (elements.length > 0) {
-            // Pick the last element
-            responseElement = elements[elements.length - 1];
-            console.log('Found latest response element with selector:', selector);
-            break;
-          }
-        }
-        
-
-        if (responseElement) {
-          try {
-            console.log('Found ChatGPT response element');
-            const responseText = responseElement.textContent;
-            console.log('Full response text:', responseText);
-
-            // If no valid JSON in code blocks, try the more general approach
-            const jsonRegex = /\{(?:[^{}]|{[^{}]*})*\}/g;
-            const matches = responseText.match(jsonRegex);
-            console.log('Found JSON matches:', matches?.length);
-            
-            if (matches) {
-              // Try each match until we find valid JSON with the expected structure
-              for (const match of matches) {
-                console.log('Trying to parse JSON match:', match);
-                try {
-                  // Clean the JSON string before parsing
-                  const cleanJson = match
-                    .replace(/[\n\r]/g, '')  // Remove line breaks
-                    .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
-                    .trim();                 // Remove leading/trailing whitespace
-                  
-                  const parsed = JSON.parse(cleanJson);
-                  console.log('Successfully parsed JSON:', parsed);
-                  
-                  // Verify this is our audit results by checking required fields
-                  if (parsed.titleScore !== undefined) {
-                    console.log('Found valid audit results JSON');
-                    
-                    // Store the audit results and product data
-                    const auditData = {
-                      audit: parsed,
-                      product: product,
-                      timestamp: Date.now()
-                    };
-                    localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
-
-                    // Enable and attach event listener to compare button
-                    compareBtn.disabled = false;
-                    compareBtn.addEventListener('click', async () => {
-                      // Create modal if it doesn't exist
-                      if (!document.getElementById('auditModal')) {
-                        createAuditModal();
-                      }
-                      
-                      // Get modal after ensuring it exists
-                      const modal = document.getElementById('auditModal');
-                      if (!modal) {
-                        console.error('Failed to create or find audit modal');
-                        return;
-                      }
-
-                      // Show modal
-                      const modalContent = modal.querySelector('.audit-modal');
-                      if (modalContent) {
-                        modalContent.style.display = 'block';
-                      }
-
-                      // Update modal content with fresh audit results
-                      updateModalContent(modal, product, parsed);
-                    });
-
-                    // Display the results summary
-                    const resultsDiv = productCard.querySelector('.audit-results');
-                    if (resultsDiv) {
-                      console.log('Displaying results summary');
-                      resultsDiv.innerHTML = `
-                    <div class="audit-summary">
-                      <h4>Audit Results</h4>
-                          <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
-                          <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
-                          <div class="priority-improvements">
-                      <h5>Priority Improvements:</h5>
-                      <ul>
-                              ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
-                      </ul>
-                          </div>
-                    </div>
-                  `;
-                    }
-                    break;
-                  } else {
-                    console.log('Found JSON but missing required fields. Available fields:', Object.keys(parsed));
-                  }
-                } catch (error) {
-                  console.log('Invalid JSON match:', error.message);
-                  console.log('Attempted to parse:', match);
-                }
-              }
-              } else {
-              console.log('No JSON matches found in response');
+        // Set a new timer to process the latest state
+        debounceTimer = setTimeout(() => {
+          console.log('Processing final state after mutations');
+          
+          // Try multiple selectors that might match ChatGPT's response
+          const selectors = [
+            '.markdown-content',
+            '[data-message-author-role="assistant"]',
+            '.prose',
+            '[data-testid="conversation-turn-"]'
+          ];
+          
+          let responseElement = null;
+          for (const selector of selectors) {
+            const elements = Array.from(document.querySelectorAll(selector));
+            if (elements.length > 0) {
+              // Pick the last element
+              responseElement = elements[elements.length - 1];
+              console.log('Found latest response element with selector:', selector);
+              break;
             }
-          } catch (error) {
-            console.error('Error processing ChatGPT response:', error);
           }
-        } else {
-          console.log('No response element found with any selector');
+
+          if (responseElement) {
+            try {
+              console.log('Found ChatGPT response element');
+              const responseText = responseElement.textContent;
+              console.log('Full response text:', responseText);
+
+              // If no valid JSON in code blocks, try the more general approach
+              const jsonRegex = /\{(?:[^{}]|{[^{}]*})*\}/g;
+              const matches = responseText.match(jsonRegex);
+              console.log('Found JSON matches:', matches?.length);
+              
+              if (matches) {
+                // Try each match until we find valid JSON with the expected structure
+                for (const match of matches) {
+                  console.log('Trying to parse JSON match:', match);
+                  try {
+                    // Clean the JSON string before parsing
+                    const cleanJson = match
+                      .replace(/[\n\r]/g, '')  // Remove line breaks
+                      .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
+                      .trim();                 // Remove leading/trailing whitespace
+                    
+                    const parsed = JSON.parse(cleanJson);
+                    console.log('Successfully parsed JSON:', parsed);
+                    
+                    // Verify this is our audit results by checking required fields
+                    if (parsed.titleScore !== undefined) {
+                      console.log('Found valid audit results JSON');
+                      
+                      // Store the audit results and product data
+                      const auditData = {
+                        audit: parsed,
+                        product: product,
+                        timestamp: Date.now()
+                      };
+                      localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
+
+                      // Enable and attach event listener to compare button
+                      compareBtn.disabled = false;
+                      compareBtn.classList.remove('loading');
+                      compareBtn.addEventListener('click', async () => {
+                        // Create modal if it doesn't exist
+                        if (!document.getElementById('auditModal')) {
+                          createAuditModal();
+                        }
+                        
+                        // Get modal after ensuring it exists
+                        const modal = document.getElementById('auditModal');
+                        if (!modal) {
+                          console.error('Failed to create or find audit modal');
+                          return;
+                        }
+
+                        // Show modal
+                        const modalContent = modal.querySelector('.audit-modal');
+                        if (modalContent) {
+                          modalContent.style.display = 'block';
+                        }
+
+                        // Update modal content with fresh audit results
+                        updateModalContent(modal, product, parsed);
+                      });
+
+                      // Display the results summary
+                      const resultsDiv = productCard.querySelector('.audit-results');
+                      if (resultsDiv) {
+                        console.log('Displaying results summary');
+                        resultsDiv.innerHTML = `
+                          <div class="audit-summary">
+                            <h4>Audit Results</h4>
+                            <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
+                            <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
+                            <div class="priority-improvements">
+                              <h5>Priority Improvements:</h5>
+                              <ul>
+                                ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
+                              </ul>
+                            </div>
+                          </div>
+                        `;
+                      }
+
+                      // Reset generate button state
+                      btn.disabled = false;
+                      btn.textContent = 'Generate ChatGPT Prompt';
+
+                      // Disconnect the observer since we've found and processed the response
+                      observer.disconnect();
+                      break;
+                    } else {
+                      console.log('Found JSON but missing required fields. Available fields:', Object.keys(parsed));
+                    }
+                  } catch (error) {
+                    console.log('Invalid JSON match:', error.message);
+                    console.log('Attempted to parse:', match);
+                  }
+                }
+              } else {
+                console.log('No JSON matches found in response');
+              }
+            } catch (error) {
+              console.error('Error processing ChatGPT response:', error);
+            }
+          } else {
+            console.log('No response element found with any selector');
+          }
+        }, 1000); // Wait 1 second after last mutation before processing
+      });
+
+      // Start observing ChatGPT's response area
+      console.log('Setting up observer');
+      const possibleTargets = [
+        '.chat-content',
+        '[data-testid="conversation-main"]',
+        'main'
+      ];
+
+      let targetNode = null;
+      for (const selector of possibleTargets) {
+        const element = document.querySelector(selector);
+        if (element) {
+          console.log('Found target node with selector:', selector);
+          targetNode = element;
+          break;
         }
-      }, 1000); // Wait 1 second after last mutation before processing
-    });
+      }
 
-    // Start observing ChatGPT's response area
-    console.log('Setting up observer');
-    const possibleTargets = [
-      '.chat-content',
-      '[data-testid="conversation-main"]',
-      'main'
-    ];
+      if (targetNode) {
+        console.log('Starting observation of target node');
+        observer.observe(targetNode, { 
+          childList: true,
+          subtree: true,
+          characterData: true,
+          characterDataOldValue: true
+        });
+      } else {
+        console.error('Could not find any suitable target node for observation');
+        // Reset button states if we couldn't find the target node
+        btn.disabled = false;
+        btn.textContent = 'Generate ChatGPT Prompt';
+        if (compareBtn) {
+          compareBtn.disabled = false;
+          compareBtn.classList.remove('loading');
+        }
+      }
 
-    let targetNode = null;
-    for (const selector of possibleTargets) {
-      const element = document.querySelector(selector);
-      if (element) {
-        console.log('Found target node with selector:', selector);
-        targetNode = element;
-        break;
+    } catch (error) {
+      console.error('Error in handleGeneratePrompt:', error);
+      btn.disabled = false;
+      btn.textContent = 'Generate ChatGPT Prompt';
+      if (compareBtn) {
+        compareBtn.disabled = false;
+        compareBtn.classList.remove('loading');
       }
     }
-
-    if (targetNode) {
-      console.log('Starting observation of target node');
-      observer.observe(targetNode, { 
-        childList: true,
-        subtree: true,
-        characterData: true,
-        characterDataOldValue: true
-      });
-    } else {
-      console.error('Could not find any suitable target node for observation');
-    }
-
-    setTimeout(() => {
-                btn.disabled = false;
-                btn.textContent = 'Generate ChatGPT Prompt';
-    }, 1000);
   }
 
-
-   // Helper function to format arrays as tags
-   function formatAsTags(items, className) {
+  // Helper function to format arrays as tags
+  function formatAsTags(items, className) {
     console.log(`Formatting ${className}:`, items);
     
     if (!Array.isArray(items) || items.length === 0) {
@@ -990,8 +1033,6 @@ generate two reviews, and no nested categories or tags.
     return reviews;
   }
 
-
-  
   // Function to handle modal updates
   function updateModalContent(modal, product, auditResults) {
     if (!modal || !product || !auditResults) {
@@ -1037,7 +1078,6 @@ generate two reviews, and no nested categories or tags.
       `;
     }
 
-   
     // Update title tab
     const titleTab = modal.querySelector('#tab-title');
     if (titleTab) {

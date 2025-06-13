@@ -715,7 +715,7 @@
         - Reviews Count: ${product.reviews_count || 0}
         
         Please analyze all aspects and return a JSON response with the following structure: make sure you return the response in the same language as the product.
-        generate two reviews, and no nested categories or tags. for description please generate a nice html content 
+        generate 5 reviews, and no nested categories or tags. for description please generate an advanced html content 
         {
           "titleScore": number (0-100),
           "titleAnalysis": string,
@@ -1854,8 +1854,11 @@
       const data = await response.json();
       console.log('Search response:', data);
       
+
       if (data.products && data.products.length > 0) {
         displayProductsList(data.products, data.totalProducts || data.products.length, data.total_pages || 1, data.current_page || 1);
+        currentProducts = data.products;
+
       } else {
         auditResultsDiv.innerHTML = `
           <div class="no-results">

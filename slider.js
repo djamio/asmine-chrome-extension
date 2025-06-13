@@ -2112,8 +2112,8 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
    {
     "enhanced_titles": [
         {
-            "original": "original title 1",
-            "enhanced": "enhanced title 1",
+            "original": "original title",
+            "enhanced": "enhanced title",
             "improvements": "brief explanation of the improvements made",
             "score": "1-10"
         }
@@ -2445,8 +2445,13 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
         letter-spacing: 0.5px;
       }
 
+      .header-cell:first-child {
+        flex: 0 0 80px; /* Product ID column - fixed width */
+      }
+
       .header-cell:last-child {
         border-right: none;
+        flex: 0 0 80px; /* Score column - fixed width */
       }
 
       .comparison-row {
@@ -2468,8 +2473,13 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
         line-height: 1.4;
       }
 
+      .title-cell:first-child {
+        flex: 0 0 80px; /* Product ID column - fixed width */
+      }
+
       .title-cell:last-child {
         border-right: none;
+        flex: 0 0 80px; /* Score column - fixed width */
       }
 
       .title-cell.original {
@@ -2478,40 +2488,41 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
       }
 
       .title-cell.enhanced {
-        background-color:rgb(255 255 255);
+        background-color: #d1ecf1;
         border-left: 4px solid #17a2b8;
         position: relative;
       }
 
       .title-cell.enhanced .editable-title {
         width: 100%;
-        min-height: 60px;
-        padding: 8px 12px;
-        border: 2px solidrgb(199, 222, 226);
+        min-height: 80px;
+        padding: 12px 16px;
+        border: 2px solid #17a2b8;
         border-radius: 6px;
         font-size: 14px;
         line-height: 1.4;
         resize: vertical;
         background-color: white;
         transition: border-color 0.2s;
+        font-family: inherit;
       }
 
       .title-cell.enhanced .editable-title:focus {
         outline: none;
-        border-color:rgb(173, 182, 192);
+        border-color: #007bff;
         box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
       }
 
       .title-cell.improvements {
         background-color: #d4edda;
-        border-left: 4px solidrgb(177, 190, 180);
+        border-left: 4px solid #28a745;
         font-style: italic;
-        color:rgb(154, 172, 158);
+        color: #155724;
       }
 
       .title-cell.score {
         background-color: #f8d7da;
-        border-left: 4px solidrgb(163, 159, 160);
+        border-left: 4px solid #dc3545;
         text-align: center;
         font-weight: bold;
         color: #721c24;

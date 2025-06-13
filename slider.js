@@ -2049,6 +2049,9 @@
     // Add click handler for bulk compare button
     if (compareBulkBtn) {
       compareBulkBtn.addEventListener('click', handleBulkCompareTitles);
+      // Initially disable the compare button until titles are generated
+      compareBulkBtn.disabled = true;
+      compareBulkBtn.style.opacity = '0.5';
     }
   }
 
@@ -2058,10 +2061,23 @@
       console.log('Generating bulk prompt...');
       const generateBtn = document.getElementById('generateBulkPrompt');
       const compareBtn = document.getElementById('compareBulkTitles');
+      const loadingState = document.getElementById('bulkLoadingState');
       
       if (generateBtn) {
         generateBtn.disabled = true;
         generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+      }
+
+      // Show loading state
+      if (loadingState) {
+        loadingState.style.display = 'block';
+      }
+
+      // Disable compare button during generation
+      if (compareBtn) {
+        compareBtn.disabled = true;
+        compareBtn.style.opacity = '0.5';
+        compareBtn.innerHTML = '<i class="fas fa-clock"></i> Waiting for ChatGPT...';
       }
 
       // Use the stored products
@@ -2137,12 +2153,15 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
         }
       }
 
-      // Show compare button
+      // Enable compare button after prompt is sent
       if (compareBtn) {
-        compareBtn.style.display = 'inline-flex';
+        compareBtn.disabled = true;
+        compareBtn.style.opacity = '0.5';
+        compareBtn.innerHTML = '<i class="fas fa-clock"></i> Waiting for ChatGPT...';
       }
 
-      // Store the original titles for comparison
+      // Start monitoring ChatGPT response
+      monitorChatGPTResponse();
 
     } catch (error) {
       console.error('Error generating bulk prompt:', error);
@@ -2154,9 +2173,100 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
         generateBtn.disabled = false;
         generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Enhanced Titles';
       }
+
+      // Hide loading state
+      const loadingState = document.getElementById('bulkLoadingState');
+      if (loadingState) {
+        loadingState.style.display = 'none';
+      }
     }
   }
-  
+
+  // Function to monitor ChatGPT response completion
+  function monitorChatGPTResponse() {
+    let checkCount = 0;
+    const maxChecks = 60; // 5 minutes max (60 * 5 seconds)
+    
+    const checkInterval = setInterval(() => {
+      checkCount++;
+      
+      // Check if ChatGPT is still typing
+      const typingIndicator = document.querySelector('[data-testid="conversation-turn-"]:last-child .typing-indicator');
+      const sendButton = document.querySelector('[data-testid="send-button"]');
+      const isSendButtonDisabled = sendButton && sendButton.disabled;
+      
+      console.log(`Checking ChatGPT response (${checkCount}/${maxChecks}):`, {
+        hasTypingIndicator: !!typingIndicator,
+        isSendButtonDisabled: isSendButtonDisabled
+      });
+      
+      // If ChatGPT is not typing and send button is enabled, response is complete
+      if (!typingIndicator && !isSendButtonDisabled && checkCount > 2) {
+        console.log('ChatGPT response completed');
+        clearInterval(checkInterval);
+        
+        // Enable compare button
+        const compareBtn = document.getElementById('compareBulkTitles');
+        if (compareBtn) {
+          compareBtn.disabled = false;
+          compareBtn.style.opacity = '1';
+          compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Titles';
+        }
+        
+        // Hide loading state
+        const loadingState = document.getElementById('bulkLoadingState');
+        if (loadingState) {
+          loadingState.style.display = 'none';
+        }
+        
+        // Show success message
+        const successMessage = document.createElement('div');
+        successMessage.className = 'bulk-success-message';
+        successMessage.innerHTML = '<i class="fas fa-check-circle"></i> ChatGPT analysis complete! You can now compare titles.';
+        successMessage.style.cssText = `
+          background: #d4edda;
+          color: #155724;
+          padding: 10px 15px;
+          border-radius: 5px;
+          margin-top: 10px;
+          text-align: center;
+          font-weight: 500;
+        `;
+        
+        const bulkActions = document.querySelector('.bulk-actions');
+        if (bulkActions) {
+          bulkActions.appendChild(successMessage);
+          
+          // Remove success message after 5 seconds
+          setTimeout(() => {
+            if (successMessage.parentNode) {
+              successMessage.remove();
+            }
+          }, 5000);
+        }
+      }
+      
+      // Stop checking after max attempts
+      if (checkCount >= maxChecks) {
+        console.log('Max checks reached, stopping monitoring');
+        clearInterval(checkInterval);
+        
+        // Enable compare button anyway
+        const compareBtn = document.getElementById('compareBulkTitles');
+        if (compareBtn) {
+          compareBtn.disabled = false;
+          compareBtn.style.opacity = '1';
+          compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Titles';
+        }
+        
+        // Hide loading state
+        const loadingState = document.getElementById('bulkLoadingState');
+        if (loadingState) {
+          loadingState.style.display = 'none';
+        }
+      }
+    }, 5000); // Check every 5 seconds
+  }
 
   // Function to show a simple modal with custom content
   function showModal(title, content) {

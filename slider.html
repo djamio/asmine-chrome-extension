@@ -81,6 +81,41 @@
             </div>
           </div>
         </div>
+
+        <div class="collapsible-section">
+          <button class="collapse-toggle">
+            <div class="toggle-content">
+              <div class="toggle-icon">
+                <i class="fas fa-align-left"></i>
+              </div>
+              <span>Bulk Short Description Enhancement</span>
+            </div>
+            <div class="toggle-arrow">
+              <i class="fas fa-chevron-down"></i>
+            </div>
+          </button>
+          <div class="collapse-content">
+            <div class="bulk-description-update">
+              <h3>Bulk Short Description Enhancement</h3>
+              <p>Generate enhanced short descriptions for all products on this page and compare them with existing descriptions.</p>
+              <div class="bulk-actions">
+                <button id="generateBulkDescPrompt" class="action-button">
+                  <i class="fas fa-magic"></i> Generate Enhanced Descriptions
+                </button>
+                <button id="compareBulkDescriptions" class="action-button secondary">
+                  <i class="fas fa-exchange-alt"></i> Compare Descriptions
+                </button>
+                <div id="bulkDescLoadingState" class="bulk-loading-state" style="display: none;">
+                  <div class="bulk-loading-content">
+                    <div class="bulk-spinner"></div>
+                    <p class="bulk-progress-text">ChatGPT is analyzing your descriptions...</p>
+                    <p class="bulk-time-remaining">This may take 30-60 seconds</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="search-container">
           <div class="search-box">
             <input type="text" id="productSearch" placeholder="Search products by name, SKU, or category...">
@@ -97,6 +132,94 @@
     </div>
   </div>
   <button class="my-slider-close" title="Close">X</button>
+</div>
+
+<!-- Bulk Title Comparison Modal -->
+<div id="bulkTitleModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Bulk Title Enhancement Results</h2>
+      <span class="close" id="closeBulkTitleModal">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="bulk-stats">
+        <div class="stat-item">
+          <span class="stat-number" id="titleStatsCount">0</span>
+          <span class="stat-label">Products</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" id="titleStatsEnhanced">0</span>
+          <span class="stat-label">Enhanced</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" id="titleStatsScore">0</span>
+          <span class="stat-label">Avg Score</span>
+        </div>
+      </div>
+      <div class="bulk-comparison-container">
+        <div class="bulk-comparison-header">
+          <div class="comparison-column">
+            <h3>Original Titles</h3>
+          </div>
+          <div class="comparison-column">
+            <h3>Enhanced Titles</h3>
+          </div>
+        </div>
+        <div id="bulkTitleComparison" class="bulk-comparison-content">
+          <!-- Comparison items will be populated here -->
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="applyTitleChanges" class="apply-button">
+        <i class="fas fa-save"></i> Apply Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Short Description Comparison Modal -->
+<div id="bulkDescModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Bulk Short Description Enhancement Results</h2>
+      <span class="close" id="closeBulkDescModal">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="bulk-stats">
+        <div class="stat-item">
+          <span class="stat-number" id="descStatsCount">0</span>
+          <span class="stat-label">Products</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" id="descStatsEnhanced">0</span>
+          <span class="stat-label">Enhanced</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" id="descStatsScore">0</span>
+          <span class="stat-label">Avg Score</span>
+        </div>
+      </div>
+      <div class="bulk-comparison-container">
+        <div class="bulk-comparison-header">
+          <div class="comparison-column">
+            <h3>Original Descriptions</h3>
+          </div>
+          <div class="comparison-column">
+            <h3>Enhanced Descriptions</h3>
+          </div>
+        </div>
+        <div id="bulkDescComparison" class="bulk-comparison-content">
+          <!-- Comparison items will be populated here -->
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="applyDescChanges" class="apply-button">
+        <i class="fas fa-save"></i> Apply Changes
+      </button>
+    </div>
+  </div>
 </div>
 
 <style>

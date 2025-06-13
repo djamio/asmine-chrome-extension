@@ -2031,36 +2031,81 @@
 
   // Initialize collapsible section
   function initializeCollapsibleSection() {
-    const toggleBtn = document.querySelector('.collapse-toggle');
-    const content = document.querySelector('.collapse-content');
-    const generateBulkBtn = document.getElementById('generateBulkPrompt');
-    const compareBulkBtn = document.getElementById('compareBulkTitles');
-    
-    if (toggleBtn && content) {
-      toggleBtn.addEventListener('click', () => {
-        const isExpanded = content.classList.contains('expanded');
-        
-        if (isExpanded) {
-          content.classList.remove('expanded');
-          toggleBtn.classList.remove('active');
-        } else {
-          content.classList.add('expanded');
-          toggleBtn.classList.add('active');
-        }
-      });
-    }
+    // Handle all collapsible sections
+    const sections = document.querySelectorAll('.collapsible-section');
+    sections.forEach(section => {
+      const toggleBtn = section.querySelector('.collapse-toggle');
+      const content = section.querySelector('.collapse-content');
+      
+      if (toggleBtn && content) {
+        toggleBtn.addEventListener('click', () => {
+          const isExpanded = content.classList.contains('expanded');
+          
+          if (isExpanded) {
+            content.classList.remove('expanded');
+            toggleBtn.classList.remove('active');
+          } else {
+            content.classList.add('expanded');
+            toggleBtn.classList.add('active');
+          }
+        });
+      }
+    });
 
-    // Add click handler for bulk generate button
+    // Add click handler for bulk generate button (title)
+    const generateBulkBtn = document.getElementById('generateBulkPrompt');
     if (generateBulkBtn) {
       generateBulkBtn.addEventListener('click', handleBulkGeneratePrompt);
     }
 
-    // Add click handler for bulk compare button
+    // Add click handler for bulk compare button (title)
+    const compareBulkBtn = document.getElementById('compareBulkTitles');
     if (compareBulkBtn) {
       compareBulkBtn.addEventListener('click', handleBulkCompareTitles);
       // Initially disable the compare button until titles are generated
       compareBulkBtn.disabled = true;
       compareBulkBtn.style.opacity = '0.5';
+    }
+
+    // Add click handler for bulk generate button (description)
+    const generateBulkDescBtn = document.getElementById('generateBulkDescPrompt');
+    if (generateBulkDescBtn) {
+      generateBulkDescBtn.addEventListener('click', handleBulkGenerateDescPrompt);
+    }
+
+    // Add click handler for bulk compare button (description)
+    const compareBulkDescBtn = document.getElementById('compareBulkDescriptions');
+    if (compareBulkDescBtn) {
+      compareBulkDescBtn.addEventListener('click', handleBulkCompareDescriptions);
+      // Initially disable the compare button until descriptions are generated
+      compareBulkDescBtn.disabled = true;
+      compareBulkDescBtn.style.opacity = '0.5';
+    }
+
+    // Add modal close handlers
+    const closeBulkTitleModal = document.getElementById('closeBulkTitleModal');
+    if (closeBulkTitleModal) {
+      closeBulkTitleModal.addEventListener('click', () => {
+        document.getElementById('bulkTitleModal').style.display = 'none';
+      });
+    }
+
+    const closeBulkDescModal = document.getElementById('closeBulkDescModal');
+    if (closeBulkDescModal) {
+      closeBulkDescModal.addEventListener('click', () => {
+        document.getElementById('bulkDescModal').style.display = 'none';
+      });
+    }
+
+    // Add apply changes handlers
+    const applyTitleChanges = document.getElementById('applyTitleChanges');
+    if (applyTitleChanges) {
+      applyTitleChanges.addEventListener('click', applyBulkTitleChanges);
+    }
+
+    const applyDescChanges = document.getElementById('applyDescChanges');
+    if (applyDescChanges) {
+      applyDescChanges.addEventListener('click', applyBulkDescChanges);
     }
   }
 
@@ -2874,6 +2919,376 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
     } catch (error) {
       console.error('Error applying bulk title changes:', error);
       throw error;
+    }
+  }
+
+  // Handle bulk description prompt generation
+  async function handleBulkGenerateDescPrompt() {
+    try {
+      console.log('Generating bulk description prompt...');
+      const generateBtn = document.getElementById('generateBulkDescPrompt');
+      const compareBtn = document.getElementById('compareBulkDescriptions');
+      const loadingState = document.getElementById('bulkDescLoadingState');
+      
+      if (generateBtn) {
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+      }
+
+      // Show loading state
+      if (loadingState) {
+        loadingState.style.display = 'block';
+      }
+
+      // Disable compare button during generation
+      if (compareBtn) {
+        compareBtn.disabled = true;
+        compareBtn.style.opacity = '0.5';
+        compareBtn.innerHTML = '<i class="fas fa-clock"></i> Waiting for ChatGPT...';
+      }
+
+      // Use the stored products
+      if (!currentProducts || !currentProducts.length) {
+        throw new Error('No products available. Please refresh the page and try again.');
+      }
+
+      // Extract short descriptions from currentProducts
+      const productShortDescriptions = currentProducts.map(product => product.shortDescription || '').filter(desc => desc);
+      const productIds = currentProducts.map(product => product.id).filter(id => id);
+
+      if (!productShortDescriptions.length) {
+        throw new Error('No product short descriptions found in the current products');
+      }
+
+      // Store both descriptions and IDs for comparison
+      localStorage.setItem('bulkOriginalDescriptions', JSON.stringify(productShortDescriptions));
+      localStorage.setItem('bulkProductIds', JSON.stringify(productIds));
+
+      // Create the prompt using your provided structure
+      const prompt = `Please analyze and enhance the following product short descriptions for an e-commerce store. For each short description, provide:
+1. An improved version that is more engaging and SEO-friendly
+2. A brief explanation of the improvements made
+3. A score from 1-10 for the original short description
+
+Here are the product short descriptions to analyze:
+
+${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${shortDescription}`).join('\n')}
+
+  Please analyze all aspects and return a JSON response with the following structure
+
+   {
+    "enhanced_short_descriptions": [
+        {
+            "original": "original shortDescription",
+            "enhanced": "enhanced shortDescription",
+            "improvements": "brief explanation of the improvements made",
+            "score": "1-10"
+        }
+    ]
+}`;
+
+      try {
+        // Find the contenteditable div (ChatGPT's input box)
+        const inputBox = document.querySelector('[contenteditable="true"]');
+        if (inputBox) {
+          // Focus the input box
+          inputBox.focus();
+
+          // Insert the prompt using execCommand
+          document.execCommand("insertText", false, prompt);
+
+          // Find and click the send button after a short delay
+          setTimeout(() => {
+            const sendButton = document.querySelector('[data-testid="send-button"]');
+            if (sendButton) {
+              sendButton.click();
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error inserting prompt:', error);
+        // Fallback: try the textarea approach
+        const textarea = document.querySelector('#prompt-textarea');
+        if (textarea) {
+          textarea.value = prompt;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea.focus();
+          const sendButton = document.querySelector('[data-testid="send-button"]');
+          if (sendButton) {
+            sendButton.click();
+          }
+        }
+      }
+
+      // Enable compare button after prompt is sent
+      if (compareBtn) {
+        compareBtn.disabled = true;
+        compareBtn.style.opacity = '0.5';
+        compareBtn.innerHTML = '<i class="fas fa-clock"></i> Waiting for ChatGPT...';
+      }
+
+      // Start monitoring ChatGPT response
+      monitorChatGPTResponseForDescriptions();
+
+    } catch (error) {
+      console.error('Error generating bulk description prompt:', error);
+      alert(error.message || 'Failed to generate bulk description prompt. Please try again.');
+    } finally {
+      // Reset button state
+      const generateBtn = document.getElementById('generateBulkDescPrompt');
+      if (generateBtn) {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Enhanced Descriptions';
+      }
+
+      // Hide loading state
+      const loadingState = document.getElementById('bulkDescLoadingState');
+      if (loadingState) {
+        loadingState.style.display = 'none';
+      }
+    }
+  }
+
+  // Handle bulk description comparison
+  async function handleBulkCompareDescriptions() {
+    try {
+      console.log('Handling bulk description comparison...');
+      const compareBtn = document.getElementById('compareBulkDescriptions');
+      
+      if (compareBtn) {
+        compareBtn.disabled = true;
+        compareBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Comparing...';
+      }
+
+      // Get the original descriptions and product IDs
+      const originalDescriptions = JSON.parse(localStorage.getItem('bulkOriginalDescriptions') || '[]');
+      const productIds = JSON.parse(localStorage.getItem('bulkProductIds') || '[]');
+      
+      if (!originalDescriptions.length) {
+        throw new Error('No original descriptions found for comparison');
+      }
+
+      // Use the new extractLastJSONFromChatGPT function
+      const analysisData = extractLastJSONFromChatGPT((json) => {
+        return json && json.enhanced_short_descriptions && Array.isArray(json.enhanced_short_descriptions);
+      });
+
+      if (!analysisData) {
+        throw new Error('No valid response found from ChatGPT. Please generate enhanced descriptions first.');
+      }
+
+      // analysisData is already a parsed object, no need to parse again
+      const enhancedDescriptions = analysisData.enhanced_short_descriptions;
+
+      // Create comparison data
+      const comparisonData = enhancedDescriptions.map((item, index) => ({
+        id: productIds[index] || index + 1,
+        name: currentProducts[index]?.name || `Product ${index + 1}`,
+        original: item.original,
+        enhanced: item.enhanced,
+        score: parseInt(item.score) || 0,
+        analysis: item.improvements || ''
+      }));
+
+      // Show comparison modal
+      showBulkDescModal(comparisonData);
+
+    } catch (error) {
+      console.error('Error comparing bulk descriptions:', error);
+      alert(error.message || 'Failed to compare descriptions. Please try again.');
+    } finally {
+      // Reset button state
+      const compareBtn = document.getElementById('compareBulkDescriptions');
+      if (compareBtn) {
+        compareBtn.disabled = false;
+        compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Descriptions';
+      }
+    }
+  }
+
+  // Function to monitor ChatGPT response completion for descriptions
+  function monitorChatGPTResponseForDescriptions() {
+    let checkCount = 0;
+    const maxChecks = 60; // 5 minutes max (60 * 5 seconds)
+    
+    const checkInterval = setInterval(() => {
+      checkCount++;
+      
+      // Check if ChatGPT is still typing
+      const typingIndicator = document.querySelector('[data-testid="conversation-turn-"]:last-child .typing-indicator');
+      const sendButton = document.querySelector('[data-testid="send-button"]');
+      const isSendButtonDisabled = sendButton && sendButton.disabled;
+      
+      console.log(`Checking ChatGPT response (${checkCount}/${maxChecks}):`, {
+        hasTypingIndicator: !!typingIndicator,
+        isSendButtonDisabled: isSendButtonDisabled
+      });
+      
+      // If ChatGPT is not typing and send button is enabled, response is complete
+      if (!typingIndicator && !isSendButtonDisabled && checkCount > 2) {
+        console.log('ChatGPT response completed');
+        clearInterval(checkInterval);
+        
+        // Enable compare button
+        const compareBtn = document.getElementById('compareBulkDescriptions');
+        if (compareBtn) {
+          compareBtn.disabled = false;
+          compareBtn.style.opacity = '1';
+          compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Descriptions';
+        }
+        
+        // Hide loading state
+        const loadingState = document.getElementById('bulkDescLoadingState');
+        if (loadingState) {
+          loadingState.style.display = 'none';
+        }
+        
+        // Show success message
+        const successMessage = document.createElement('div');
+        successMessage.className = 'bulk-success-message';
+        successMessage.innerHTML = '<i class="fas fa-check-circle"></i> ChatGPT analysis complete! You can now compare descriptions.';
+        successMessage.style.cssText = `
+          background: #d4edda;
+          color: #155724;
+          padding: 10px 15px;
+          border-radius: 5px;
+          margin-top: 10px;
+          text-align: center;
+          font-weight: 500;
+        `;
+        
+        const bulkActions = document.querySelector('.bulk-actions');
+        if (bulkActions) {
+          bulkActions.appendChild(successMessage);
+          
+          // Remove success message after 5 seconds
+          setTimeout(() => {
+            if (successMessage.parentNode) {
+              successMessage.remove();
+            }
+          }, 5000);
+        }
+      }
+      
+      // Stop checking after max attempts
+      if (checkCount >= maxChecks) {
+        console.log('Max checks reached, stopping monitoring');
+        clearInterval(checkInterval);
+        
+        // Enable compare button anyway
+        const compareBtn = document.getElementById('compareBulkDescriptions');
+        if (compareBtn) {
+          compareBtn.disabled = false;
+          compareBtn.style.opacity = '1';
+          compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Descriptions';
+        }
+        
+        // Hide loading state
+        const loadingState = document.getElementById('bulkDescLoadingState');
+        if (loadingState) {
+          loadingState.style.display = 'none';
+        }
+      }
+    }, 5000); // Check every 5 seconds
+  }
+
+  // Function to show bulk description modal
+  function showBulkDescModal(comparisonData) {
+    const modal = document.getElementById('bulkDescModal');
+    const comparisonContainer = document.getElementById('bulkDescComparison');
+    const statsCount = document.getElementById('descStatsCount');
+    const statsEnhanced = document.getElementById('descStatsEnhanced');
+    const statsScore = document.getElementById('descStatsScore');
+
+    // Update stats
+    statsCount.textContent = comparisonData.length;
+    const enhancedCount = comparisonData.filter(item => item.enhanced !== item.original).length;
+    statsEnhanced.textContent = enhancedCount;
+    const avgScore = Math.round(comparisonData.reduce((sum, item) => sum + item.score, 0) / comparisonData.length);
+    statsScore.textContent = avgScore;
+
+    // Create comparison HTML
+    comparisonContainer.innerHTML = comparisonData.map((item, index) => `
+      <div class="comparison-item">
+        <div class="comparison-column">
+          <div class="product-info">
+            <h4>${item.name}</h4>
+            <div class="score-badge">Score: ${item.score}</div>
+          </div>
+          <textarea class="comparison-textarea" data-index="${index}" data-field="original" readonly>${item.original}</textarea>
+          <div class="analysis-text">${item.analysis}</div>
+        </div>
+        <div class="comparison-column">
+          <div class="product-info">
+            <h4>Enhanced Version</h4>
+            <div class="score-badge enhanced">Enhanced</div>
+          </div>
+          <textarea class="comparison-textarea" data-index="${index}" data-field="enhanced">${item.enhanced}</textarea>
+        </div>
+      </div>
+    `).join('');
+
+    modal.style.display = 'block';
+  }
+
+  // Function to apply bulk description changes
+  async function applyBulkDescChanges() {
+    const modal = document.getElementById('bulkDescModal');
+    const textareas = modal.querySelectorAll('textarea[data-field="enhanced"]');
+    const updates = [];
+
+    textareas.forEach((textarea, index) => {
+      const enhancedDesc = textarea.value.trim();
+      
+      if (enhancedDesc) {
+        updates.push({
+          id: currentProducts[index].id,
+          short_description: enhancedDesc
+        });
+      }
+    });
+
+    if (updates.length === 0) {
+      alert('No changes to apply.');
+      return;
+    }
+
+    try {
+      const response = await fetch('https://your-backend-server.com/api/bulk-update-descriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('wooAuthToken')}`,
+          'X-Store-URL': localStorage.getItem('wooStoreURL'),
+          'X-Consumer-Key': localStorage.getItem('wooConsumerKey'),
+          'X-Consumer-Secret': localStorage.getItem('wooConsumerSecret')
+        },
+        body: JSON.stringify({ updates })
+      });
+
+      if (response.ok) {
+        alert(`Successfully updated ${updates.length} product descriptions!`);
+        modal.style.display = 'none';
+        // Refresh the products list
+        if (typeof loadProducts === 'function') {
+          loadProducts();
+        }
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error applying description changes:', error);
+      
+      // Fallback: Copy to clipboard
+      const updatesText = updates.map(update => 
+        `Product ID: ${update.id}\nNew Description: ${update.short_description}\n---`
+      ).join('\n');
+      
+      navigator.clipboard.writeText(updatesText).then(() => {
+        alert(`Error applying changes. Updates have been copied to clipboard.\n\n${updates.length} descriptions ready for manual update.`);
+      }).catch(() => {
+        alert(`Error applying changes. Please copy the following updates manually:\n\n${updatesText}`);
+      });
     }
   }
 })();

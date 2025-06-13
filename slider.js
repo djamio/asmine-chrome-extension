@@ -2069,12 +2069,17 @@
         throw new Error('No products available. Please refresh the page and try again.');
       }
 
-      // Extract titles from currentProducts
+      // Extract titles and IDs from currentProducts
       const productTitles = currentProducts.map(product => product.name || product.title).filter(title => title);
+      const productIds = currentProducts.map(product => product.id).filter(id => id);
 
       if (!productTitles.length) {
         throw new Error('No product titles found in the current products');
       }
+
+      // Store both titles and IDs for comparison
+      localStorage.setItem('bulkOriginalTitles', JSON.stringify(productTitles));
+      localStorage.setItem('bulkProductIds', JSON.stringify(productIds));
 
       // Create the prompt
       const prompt = `Please analyze and enhance the following product titles for an e-commerce store. For each title, provide:
@@ -2363,7 +2368,7 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
       }
 
       .title-cell.enhanced {
-        background-color: #d1ecf1;
+        background-color:rgb(255 255 255);
         border-left: 4px solid #17a2b8;
         position: relative;
       }
@@ -2372,7 +2377,7 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
         width: 100%;
         min-height: 60px;
         padding: 8px 12px;
-        border: 2px solid #17a2b8;
+        border: 2px solidrgb(199, 222, 226);
         border-radius: 6px;
         font-size: 14px;
         line-height: 1.4;
@@ -2383,26 +2388,37 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
 
       .title-cell.enhanced .editable-title:focus {
         outline: none;
-        border-color: #007bff;
+        border-color:rgb(173, 182, 192);
         box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
       }
 
       .title-cell.improvements {
         background-color: #d4edda;
-        border-left: 4px solid #28a745;
+        border-left: 4px solidrgb(177, 190, 180);
         font-style: italic;
-        color: #155724;
+        color:rgb(154, 172, 158);
       }
 
       .title-cell.score {
         background-color: #f8d7da;
-        border-left: 4px solid #dc3545;
+        border-left: 4px solidrgb(163, 159, 160);
         text-align: center;
         font-weight: bold;
         color: #721c24;
         display: flex;
         align-items: center;
         justify-content: center;
+      }
+
+      .title-cell.product-id {
+        background-color: #e2e3e5;
+        border-left: 4px solid #6c757d;
+        text-align: center;
+        font-weight: 600;
+        color: #495057;
+        font-size: 12px;
+        min-width: 80px;
+        max-width: 80px;
       }
 
       .score-badge {
@@ -2525,13 +2541,16 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
           const rows = modal.querySelectorAll('.comparison-row');
           
           rows.forEach((row, index) => {
+            const productIdCell = row.querySelector('.title-cell.product-id');
             const originalCell = row.querySelector('.title-cell.original');
             const enhancedCell = row.querySelector('.title-cell.enhanced');
             const editableInput = enhancedCell.querySelector('.editable-title');
             
             if (originalCell && editableInput) {
+              const productId = productIdCell ? parseInt(productIdCell.textContent.trim()) : null;
               editedTitles.push({
                 index: index,
+                id: productId,
                 original: originalCell.textContent.trim(),
                 enhanced: editableInput.value.trim()
               });
@@ -2570,8 +2589,10 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
             compareBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Comparing...';
         }
 
-        // Get the original titles
+        // Get the original titles and product IDs
         const originalTitles = JSON.parse(localStorage.getItem('bulkOriginalTitles') || '[]');
+        const productIds = JSON.parse(localStorage.getItem('bulkProductIds') || '[]');
+        
         if (!originalTitles.length) {
             throw new Error('No original titles found for comparison');
         }
@@ -2590,7 +2611,7 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
             throw new Error('No enhanced titles found in the response');
         }
 
-        // Create modal content
+        // Create modal content with product IDs
         const modalContent = `
             <div class="bulk-comparison">
                 <div class="bulk-stats">
@@ -2613,13 +2634,15 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
                 </div>
                 <div class="comparison-table">
                     <div class="table-header">
+                        <div class="header-cell">Product ID</div>
                         <div class="header-cell">Original Title</div>
                         <div class="header-cell">Enhanced Title (Editable)</div>
                         <div class="header-cell">Improvements</div>
                         <div class="header-cell">Score</div>
                     </div>
-                    ${enhancedTitles.map(item => `
-                        <div class="comparison-row">
+                    ${enhancedTitles.map((item, index) => `
+                        <div class="comparison-row" data-product-id="${productIds[index] || 'unknown'}">
+                            <div class="title-cell product-id">${productIds[index] || 'N/A'}</div>
                             <div class="title-cell original">${item.original}</div>
                             <div class="title-cell enhanced">
                                 <div class="enhanced-label">Enhanced Version</div>
@@ -2657,22 +2680,55 @@ ${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
       console.log('Calling bulk title changes API with:', editedTitles);
       
       // Get current auth credentials
-      const auth = JSON.parse(localStorage.getItem('wooAuth') || '{}');
+      const authStorage = JSON.parse(localStorage.getItem('wooAuth') || '{}');
+      const auth = authStorage.wooAuth;
+      // Check if WooCommerce is connected
       if (!auth.isConnected || !auth.storeUrl || !auth.consumerKey || !auth.consumerSecret) {
-        throw new Error('WooCommerce not connected. Please connect your store first.');
+        // If not connected, just show the changes without applying them
+        console.log('WooCommerce not connected. Showing changes preview only.');
+        
+        // Create a summary of changes
+        const changesSummary = editedTitles.map(item => 
+          `• "${item.original}" → "${item.enhanced}"`
+        ).join('\n');
+        
+        // Show the changes in a confirmation dialog
+        const confirmed = confirm(
+          `WooCommerce not connected. Here are the title changes that would be applied:\n\n${changesSummary}\n\nWould you like to copy these changes to clipboard?`
+        );
+        
+        if (confirmed) {
+          // Copy changes to clipboard
+          const changesText = editedTitles.map(item => 
+            `${item.original} → ${item.enhanced}`
+          ).join('\n');
+          
+          await navigator.clipboard.writeText(changesText);
+          alert('Changes copied to clipboard! You can paste them into your WooCommerce admin panel.');
+        }
+        
+        return { success: true, message: 'Changes previewed (WooCommerce not connected)' };
       }
 
       // TODO: Replace with actual API endpoint
-      const apiUrl = `${auth.storeUrl}/wp-json/wc/v3/products/bulk-update-titles`;
+      const apiUrl = `https://asmine-production.up.railway.app/api/woo/products/bulk-update-titles`;
+      
+      // Transform the data to match backend expectations
+      const transformedTitles = editedTitles.map(item => ({
+        id: item.id || item.index + 1, // Use actual product ID if available, fallback to index
+        title: item.enhanced
+      }));
       
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + btoa(`${auth.consumerKey}:${auth.consumerSecret}`)
+          'x-woo-store-url': auth.storeUrl,
+          'x-woo-consumer-key': auth.consumerKey,
+          'x-woo-consumer-secret': auth.consumerSecret
         },
         body: JSON.stringify({
-          titles: editedTitles,
+          titles: transformedTitles,
           timestamp: Date.now()
         })
       });

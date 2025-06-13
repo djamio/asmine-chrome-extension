@@ -1439,7 +1439,7 @@
               // If switching to audit tab and we're connected, load products
               if (target === 'audit' && currentAuth?.isConnected) {
                 console.log('Loading products for audit tab');
-                renderPage();
+                // renderPage();
               }
             }
           });

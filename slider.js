@@ -2035,9 +2035,15 @@
     
     if (toggleBtn && content) {
       toggleBtn.addEventListener('click', () => {
-        const isExpanded = content.style.display !== 'none';
-        content.style.display = isExpanded ? 'none' : 'block';
-        toggleBtn.classList.toggle('active');
+        const isExpanded = content.classList.contains('expanded');
+        
+        if (isExpanded) {
+          content.classList.remove('expanded');
+          toggleBtn.classList.remove('active');
+        } else {
+          content.classList.add('expanded');
+          toggleBtn.classList.add('active');
+        }
       });
     }
 

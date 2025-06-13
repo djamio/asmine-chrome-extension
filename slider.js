@@ -16,6 +16,9 @@
   let auditResultsDiv;
   let currentAuth = null;
 
+  // Global variable to store current products
+  let currentProducts = [];
+
   // Add styles for modal content
   const modalStyles = `
     .comparison-container {
@@ -1377,7 +1380,7 @@
 
     const { products, totalProducts, totalPages } = data;
     console.log(`Rendering ${products.length} products, page ${currentPage}/${totalPages}`);
-
+    currentProducts = products;
     // Create product cards
     displayProductsList(products, totalProducts, totalPages, currentPage);
   }
@@ -1494,6 +1497,7 @@
           currentAuth = auth.wooAuth;
           renderPage();
         }
+        initializeCollapsibleSection();
       })
       .catch(error => console.error('Error injecting slider:', error));
   }
@@ -1960,7 +1964,7 @@
       
       try {
         // Find the product in our products array
-        const product = products.find(p => p.id === productId);
+        const product = currentProducts.find(p => p.id === productId);
         if (!product) {
           throw new Error('Product not found');
         }
@@ -2036,4 +2040,270 @@
       }
     }
   });
+
+  // Initialize collapsible section
+  function initializeCollapsibleSection() {
+    const toggleBtn = document.querySelector('.collapse-toggle');
+    const content = document.querySelector('.collapse-content');
+    const generateBulkBtn = document.getElementById('generateBulkPrompt');
+    const compareBulkBtn = document.getElementById('compareBulkTitles');
+    
+    if (toggleBtn && content) {
+      toggleBtn.addEventListener('click', () => {
+        const isExpanded = content.style.display !== 'none';
+        content.style.display = isExpanded ? 'none' : 'block';
+        toggleBtn.classList.toggle('active');
+      });
+    }
+
+    // Add click handler for bulk generate button
+    if (generateBulkBtn) {
+      generateBulkBtn.addEventListener('click', handleBulkGeneratePrompt);
+    }
+
+    // Add click handler for bulk compare button
+    if (compareBulkBtn) {
+      compareBulkBtn.addEventListener('click', handleBulkCompareTitles);
+    }
+  }
+
+  // Handle bulk prompt generation
+  async function handleBulkGeneratePrompt() {
+    try {
+      console.log('Generating bulk prompt...');
+      const generateBtn = document.getElementById('generateBulkPrompt');
+      const compareBtn = document.getElementById('compareBulkTitles');
+      
+      if (generateBtn) {
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+      }
+
+      // Use the stored products
+      if (!currentProducts || !currentProducts.length) {
+        throw new Error('No products available. Please refresh the page and try again.');
+      }
+
+      // Extract titles from currentProducts
+      const productTitles = currentProducts.map(product => product.name || product.title).filter(title => title);
+
+      if (!productTitles.length) {
+        throw new Error('No product titles found in the current products');
+      }
+
+      // Create the prompt
+      const prompt = `Please analyze and enhance the following product titles for an e-commerce store. For each title, provide:
+1. An improved version that is more engaging and SEO-friendly
+2. A brief explanation of the improvements made
+3. A score from 1-10 for the original title
+
+Here are the product titles to analyze:
+
+${productTitles.map((title, index) => `${index + 1}. ${title}`).join('\n')}
+
+Please format your response as follows for each product:
+
+Original Title: [title]
+Enhanced Title: [enhanced version]
+Improvements: [brief explanation]
+Score: [1-10]
+
+Please analyze each title and provide specific, actionable improvements.`;
+
+      try {
+        // Find the contenteditable div (ChatGPT's input box)
+        const inputBox = document.querySelector('[contenteditable="true"]');
+        if (inputBox) {
+          // Focus the input box
+          inputBox.focus();
+
+          // Insert the prompt using execCommand
+          document.execCommand("insertText", false, prompt);
+
+          // Find and click the send button after a short delay
+          setTimeout(() => {
+            const sendButton = document.querySelector('[data-testid="send-button"]');
+            if (sendButton) {
+              sendButton.click();
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error inserting prompt:', error);
+        // Fallback: try the textarea approach
+        const textarea = document.querySelector('#prompt-textarea');
+        if (textarea) {
+          textarea.value = prompt;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea.focus();
+          const sendButton = document.querySelector('[data-testid="send-button"]');
+          if (sendButton) {
+            sendButton.click();
+          }
+        }
+      }
+
+      // Show compare button
+      if (compareBtn) {
+        compareBtn.style.display = 'inline-flex';
+      }
+
+      // Store the original titles for comparison
+      localStorage.setItem('bulkOriginalTitles', JSON.stringify(productTitles));
+
+    } catch (error) {
+      console.error('Error generating bulk prompt:', error);
+      alert(error.message || 'Failed to generate bulk prompt. Please try again.');
+    } finally {
+      // Reset button state
+      const generateBtn = document.getElementById('generateBulkPrompt');
+      if (generateBtn) {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Enhanced Titles';
+      }
+    }
+  }
+
+  // Handle bulk comparison
+  async function handleBulkCompareTitles() {
+    const originalTitles = JSON.parse(localStorage.getItem('bulkOriginalTitles') || '[]');
+    const enhancedTitles = JSON.parse(localStorage.getItem('bulkEnhancedTitles') || '[]');
+
+    if (originalTitles.length === 0 || enhancedTitles.length === 0) {
+        alert('No titles to compare. Please generate enhanced titles first.');
+        return;
+    }
+
+    // Create modal container
+    const modal = document.createElement('div');
+    modal.className = 'bulk-compare-modal';
+    modal.innerHTML = `
+        <div class="bulk-compare-content">
+            <div class="bulk-compare-header">
+                <h2>Title Comparison</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="bulk-compare-body">
+                <div class="comparison-table">
+                    <div class="table-header">
+                        <div class="header-cell">Original Title</div>
+                        <div class="header-cell">Enhanced Title</div>
+                    </div>
+                    ${originalTitles.map((original, index) => `
+                        <div class="comparison-row">
+                            <div class="title-cell original">${original}</div>
+                            <div class="title-cell enhanced">${enhancedTitles[index] || 'No enhanced title'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .bulk-compare-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .bulk-compare-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .bulk-compare-header {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bulk-compare-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #1f2937;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 4px;
+        }
+        .close-modal:hover {
+            color: #1f2937;
+        }
+        .bulk-compare-body {
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .header-cell {
+            font-weight: 600;
+            color: #374151;
+        }
+        .comparison-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .title-cell {
+            padding: 8px;
+            border-radius: 4px;
+            background: #f9fafb;
+        }
+        .title-cell.original {
+            border-left: 4px solid #6b7280;
+        }
+        .title-cell.enhanced {
+            border-left: 4px solid #10b981;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Add event listeners
+    modal.querySelector('.close-modal').addEventListener('click', () => {
+        modal.remove();
+        style.remove();
+    });
+
+    // Close on outside click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+            style.remove();
+        }
+    });
+
+    // Add to document
+    document.body.appendChild(modal);
+  }
 })();

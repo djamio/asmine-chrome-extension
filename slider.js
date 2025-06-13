@@ -665,7 +665,7 @@
         Product Details:
         - Title: ${product.title}
         - Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
-        - Full Description: ${product.description && product.description.length ? product.description.slice(0, 200) : 'No description available'}
+        - Full Description: ${product.description && product.description.length ? product.description.slice(0, 300) : 'No description available'}
         - Specifications: ${JSON.stringify(product.specifications || [])}
         - Categories: ${JSON.stringify(product.categories || [])}
         - Tags: ${JSON.stringify(product.tags || [])}
@@ -1887,4 +1887,153 @@
       `;
     }
   }
+
+  // Function to check connection status and update UI
+  function updateConnectionUI(isConnected) {
+    const connectionMessage = document.getElementById('connection-required-message');
+    const searchContainer = document.querySelector('.search-container');
+    const auditResults = document.getElementById('auditResults');
+    const pagination = document.getElementById('pagination');
+
+    if (!isConnected) {
+      // Show connection required message
+      if (connectionMessage) {
+        connectionMessage.style.display = 'block';
+      }
+      // Hide other elements
+      if (searchContainer) {
+        searchContainer.style.display = 'none';
+      }
+      if (auditResults) {
+        auditResults.style.display = 'none';
+      }
+      if (pagination) {
+        pagination.style.display = 'none';
+      }
+    } else {
+      // Hide connection required message
+      if (connectionMessage) {
+        connectionMessage.style.display = 'none';
+      }
+      // Show other elements
+      if (searchContainer) {
+        searchContainer.style.display = 'block';
+      }
+      if (auditResults) {
+        auditResults.style.display = 'block';
+      }
+      if (pagination) {
+        pagination.style.display = 'block';
+      }
+    }
+  }
+
+  // Simple click handler for connect store now button
+  document.getElementById('connectNowBtn').onclick = function() {
+    // Hide audit tab
+    document.getElementById('tab-audit').style.display = 'none';
+    // Show connect tab
+    document.getElementById('tab-connect').style.display = 'block';
+    // Update active states
+    document.querySelector('[data-tab="audit"]').classList.remove('active');
+    document.querySelector('[data-tab="connect"]').classList.add('active');
+  };
+
+  // Add event listener for auth status changes
+  document.addEventListener('wooAuthChanged', (event) => {
+    updateConnectionUI(event.detail.isConnected);
+  });
+
+  // Initial check of connection status
+  const auth = JSON.parse(localStorage.getItem('wooAuth'));
+  updateConnectionUI(auth?.wooAuth?.isConnected || false);
+
+  // Add click handler for compare button
+  document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('compare-btn')) {
+      const button = e.target;
+      const productId = button.getAttribute('data-product-id');
+      
+      // Show loading state
+      button.classList.add('loading');
+      button.disabled = true;
+      
+      try {
+        // Find the product in our products array
+        const product = products.find(p => p.id === productId);
+        if (!product) {
+          throw new Error('Product not found');
+        }
+
+        // Get the most recent audit results
+        const auditResults = product.auditResults;
+        if (!auditResults || !auditResults.length) {
+          throw new Error('No audit results available for this product');
+        }
+
+        // Get the most recent result (last in the array)
+        const latestResult = auditResults[auditResults.length - 1];
+
+        // Create or get modal
+        let modal = document.getElementById('comparisonModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'comparisonModal';
+          modal.className = 'modal';
+          document.body.appendChild(modal);
+        }
+
+        // Update modal content with the latest results
+        modal.innerHTML = `
+          <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>${product.name} - Audit Results</h2>
+            <div class="audit-details">
+              <h3>${latestResult.title}</h3>
+              <p>${latestResult.description}</p>
+              <div class="reviews-scores">
+                <h4>Reviews Analysis</h4>
+                <div class="score-item">
+                  <span>Positive Reviews:</span>
+                  <span class="score positive">${latestResult.reviews_scores.positive_reviews}%</span>
+                </div>
+                <div class="score-item">
+                  <span>Negative Reviews:</span>
+                  <span class="score negative">${latestResult.reviews_scores.negative_reviews}%</span>
+                </div>
+                <div class="score-item">
+                  <span>Neutral Reviews:</span>
+                  <span class="score neutral">${latestResult.reviews_scores.neutral_reviews}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Show modal
+        modal.style.display = 'block';
+
+        // Add close button functionality
+        const closeBtn = modal.querySelector('.close');
+        closeBtn.onclick = function() {
+          modal.style.display = 'none';
+        };
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+          if (event.target === modal) {
+            modal.style.display = 'none';
+          }
+        };
+
+      } catch (error) {
+        console.error('Error showing comparison:', error);
+        alert(error.message || 'Failed to show comparison. Please try again.');
+      } finally {
+        // Remove loading state
+        button.classList.remove('loading');
+        button.disabled = false;
+      }
+    }
+  });
 })();

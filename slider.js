@@ -3254,14 +3254,24 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
     }
 
     try {
-      const response = await fetch('https://your-backend-server.com/api/bulk-update-descriptions', {
+      // Get stored auth data from localStorage using the correct structure
+      const authData = JSON.parse(localStorage.getItem('wooAuth'));
+      if (!authData?.wooAuth) {
+        throw new Error('No WooCommerce authentication data found');
+      }
+
+      const { storeUrl, consumerKey, consumerSecret } = authData.wooAuth;
+      if (!storeUrl || !consumerKey || !consumerSecret) {
+        throw new Error('Missing required WooCommerce credentials');
+      }
+
+      const response = await fetch('https://asmine-production.up.railway.app/api/woo/products/bulk-update-descriptions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('wooAuthToken')}`,
-          'X-Store-URL': localStorage.getItem('wooStoreURL'),
-          'X-Consumer-Key': localStorage.getItem('wooConsumerKey'),
-          'X-Consumer-Secret': localStorage.getItem('wooConsumerSecret')
+          'x-woo-store-url': storeUrl,
+          'x-woo-consumer-key': consumerKey,
+          'x-woo-consumer-secret': consumerSecret
         },
         body: JSON.stringify({ updates })
       });

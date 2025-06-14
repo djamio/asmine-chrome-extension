@@ -624,21 +624,21 @@
       last: !!lastPageBtn
     });
 
-    // Check if we're in search mode
-    const isSearchMode = window.currentSearchQuery && window.currentSearchQuery.length > 0;
-    const currentPage = isSearchMode ? window.currentSearchPage : window.currentPage || 1;
-
     if (nextPageBtn) {
       nextPageBtn.onclick = async () => {
-        console.log('Next button clicked, current page:', currentPage, 'total pages:', totalPages);
-        if (currentPage < totalPages && currentAuth?.isConnected) {
+        // Get current page dynamically
+        const isSearchMode = window.currentSearchQuery && window.currentSearchQuery.length > 0;
+        const currentPageValue = isSearchMode ? window.currentSearchPage : currentPage;
+        
+        console.log('Next button clicked, current page:', currentPageValue, 'total pages:', totalPages);
+        if (currentPageValue < totalPages && currentAuth?.isConnected) {
           if (isSearchMode) {
             // Handle search pagination
             window.currentSearchPage++;
             await searchProducts(window.currentSearchQuery, window.currentSearchPage);
           } else {
             // Handle regular product pagination
-            window.currentPage = (window.currentPage || 1) + 1;
+            currentPage++;
             await renderPage();
           }
         }
@@ -647,15 +647,19 @@
 
     if (prevPageBtn) {
       prevPageBtn.onclick = async () => {
-        console.log('Previous button clicked, current page:', currentPage);
-        if (currentPage > 1 && currentAuth?.isConnected) {
+        // Get current page dynamically
+        const isSearchMode = window.currentSearchQuery && window.currentSearchQuery.length > 0;
+        const currentPageValue = isSearchMode ? window.currentSearchPage : currentPage;
+        
+        console.log('Previous button clicked, current page:', currentPageValue);
+        if (currentPageValue > 1 && currentAuth?.isConnected) {
           if (isSearchMode) {
             // Handle search pagination
             window.currentSearchPage--;
             await searchProducts(window.currentSearchQuery, window.currentSearchPage);
           } else {
             // Handle regular product pagination
-            window.currentPage = (window.currentPage || 1) - 1;
+            currentPage--;
             await renderPage();
           }
         }
@@ -664,15 +668,19 @@
 
     if (firstPageBtn) {
       firstPageBtn.onclick = async () => {
-        console.log('First button clicked, current page:', currentPage);
-        if (currentPage !== 1 && currentAuth?.isConnected) {
+        // Get current page dynamically
+        const isSearchMode = window.currentSearchQuery && window.currentSearchQuery.length > 0;
+        const currentPageValue = isSearchMode ? window.currentSearchPage : currentPage;
+        
+        console.log('First button clicked, current page:', currentPageValue);
+        if (currentPageValue !== 1 && currentAuth?.isConnected) {
           if (isSearchMode) {
             // Handle search pagination
             window.currentSearchPage = 1;
             await searchProducts(window.currentSearchQuery, window.currentSearchPage);
           } else {
             // Handle regular product pagination
-            window.currentPage = 1;
+            currentPage = 1;
             await renderPage();
           }
         }
@@ -681,15 +689,19 @@
 
     if (lastPageBtn) {
       lastPageBtn.onclick = async () => {
-        console.log('Last button clicked, current page:', currentPage, 'total pages:', totalPages);
-        if (currentPage !== totalPages && currentAuth?.isConnected) {
+        // Get current page dynamically
+        const isSearchMode = window.currentSearchQuery && window.currentSearchQuery.length > 0;
+        const currentPageValue = isSearchMode ? window.currentSearchPage : currentPage;
+        
+        console.log('Last button clicked, current page:', currentPageValue, 'total pages:', totalPages);
+        if (currentPageValue !== totalPages && currentAuth?.isConnected) {
           if (isSearchMode) {
             // Handle search pagination
             window.currentSearchPage = totalPages;
             await searchProducts(window.currentSearchQuery, window.currentSearchPage);
           } else {
             // Handle regular product pagination
-            window.currentPage = totalPages;
+            currentPage = totalPages;
             await renderPage();
           }
         }
@@ -1397,7 +1409,9 @@ Product Details:
   }
 
   async function renderPage() {
-    console.log('Rendering page:', currentPage);
+    // Use window.currentPage if available, otherwise use global currentPage
+    const pageToRender = window.currentPage || currentPage;
+    console.log('Rendering page:', pageToRender);
     if (!auditResultsDiv) {
       console.error('auditResultsDiv not found');
       return;
@@ -1415,7 +1429,7 @@ Product Details:
       console.log('Retrieved auth state:', currentAuth);
     }
 
-    const data = await fetchProducts(currentPage);
+    const data = await fetchProducts(pageToRender);
     console.log('Fetched products data:', data);
     if (!data) {
       console.log('No data returned from fetchProducts');
@@ -1423,10 +1437,10 @@ Product Details:
     }
 
     const { products, totalProducts, totalPages } = data;
-    console.log(`Rendering ${products.length} products, page ${currentPage}/${totalPages}`);
+    console.log(`Rendering ${products.length} products, page ${pageToRender}/${totalPages}`);
     currentProducts = products;
     // Create product cards
-    displayProductsList(products, totalProducts, totalPages, currentPage);
+    displayProductsList(products, totalProducts, totalPages, pageToRender);
   }
 
   function injectSlider() {

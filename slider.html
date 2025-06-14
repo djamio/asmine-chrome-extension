@@ -3,6 +3,7 @@
     <div class="my-slider-menu">
       <button class="my-slider-tab-btn" data-tab="connect" title="Connect to WooCommerce">🔗</button>
       <button class="my-slider-tab-btn active" data-tab="audit" title="Audit">📊</button>
+      <button class="my-slider-tab-btn" data-tab="bulk-operations" title="Bulk Operations">⚡</button>
     </div>
     <div class="my-slider-content">
       <div id="tab-connect" class="my-slider-tab-content" style="display: none;">
@@ -64,6 +65,44 @@
           </div>
         </div>
         
+        <div class="search-container">
+          <div class="search-box">
+            <input type="text" id="productSearch" placeholder="Search products by name, SKU, or category...">
+            <button id="searchProducts" class="search-button">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button id="clearSearch" class="clear-search-button" style="display: none;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+      </div>
+        <div id="auditResults"></div>
+        <div id="pagination"></div>
+      </div>
+
+      <div id="tab-bulk-operations" class="my-slider-tab-content" style="display: none;">
+        <h2 style="    padding-bottom: 20px;">Bulk Operations</h2>
+        
+        <!-- Connection Notice
+        <div id="connectionNoticeBulk" class="connection-notice" style="display: none;">
+          <div class="notice-content">
+            <div class="notice-icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="notice-text">
+              <h3>WooCommerce Connection Required</h3>
+              <p>Please connect to your WooCommerce store first to access the bulk operations. Your store URL and API credentials are needed to fetch and analyze your products.</p>
+              <button id="goToConnectionBulk" class="notice-button">
+                <i class="fas fa-plug"></i> Go to Connection
+              </button>
+            </div>
+          </div>
+        </div> -->
+        
         <div class="collapsible-section">
           <button class="collapse-toggle">
             <div class="toggle-content">
@@ -113,7 +152,7 @@
           </button>
           <div class="collapse-content">
             <div class="bulk-description-update">
-              <h3 sty>Bulk Short Description Enhancement</h3>
+              <h3>Bulk Short Description Enhancement</h3>
               <p style="font-size: 10px; color: grey; padding-bottom: 10px;">Generate enhanced short descriptions for all products on this page and compare them with existing descriptions.</p>
               <div class="bulk-actions"> 
                 <button id="generateBulkDescPrompt" class="action-button">
@@ -133,23 +172,24 @@
             </div>
           </div>
         </div>
-        <div class="search-container">
-          <div class="search-box">
-            <input type="text" id="productSearch" placeholder="Search products by name, SKU, or category...">
-            <button id="searchProducts" class="search-button">
+        
+        <!-- <div class="search-container"> -->
+          <!-- <div class="search-box">
+            <input type="text" id="productSearchBulk" placeholder="Search products by name, SKU, or category...">
+            <button id="searchProductsBulk" class="search-button">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
-            <button id="clearSearch" class="clear-search-button" style="display: none;">
+            <button id="clearSearchBulk" class="clear-search-button" style="display: none;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
           </div>
-      </div>
-        <div id="auditResults"></div>
-        <div id="pagination"></div>
+      </div> -->
+        <div id="auditResultsBulk"></div>
+        <div id="paginationBulk"></div>
       </div>
     </div>
   </div>

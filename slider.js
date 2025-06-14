@@ -246,12 +246,25 @@
   // Function to check if we should load products
   function shouldLoadProducts() {
     const auditTab = document.getElementById('tab-audit');
-    return auditTab && auditTab.style.display === 'block' && currentAuth?.isConnected;
+    const bulkOperationsTab = document.getElementById('tab-bulk-operations');
+    return (auditTab && auditTab.style.display === 'block' || 
+            bulkOperationsTab && bulkOperationsTab.style.display === 'block') && 
+           currentAuth?.isConnected;
   }
 
   // Reusable function to display products list
   function displayProductsList(products, totalProducts = 0, totalPages = 1, currentPage = 1) {
-    if (!auditResultsDiv) {
+    // Determine which tab is currently active
+    const auditTab = document.getElementById('tab-audit');
+    const bulkOperationsTab = document.getElementById('tab-bulk-operations');
+    const isBulkOperationsActive = bulkOperationsTab && bulkOperationsTab.style.display === 'block';
+    
+    // Set the appropriate results div
+    const targetResultsDiv = isBulkOperationsActive ? 
+      document.getElementById('auditResultsBulk') : 
+      document.getElementById('auditResults');
+    
+    if (!targetResultsDiv) {
       console.error('auditResultsDiv not found');
       return;
     }
@@ -261,7 +274,8 @@
       totalProducts,
       totalPages,
       currentPage,
-      isSearchMode: !!window.currentSearchQuery
+      isSearchMode: !!window.currentSearchQuery,
+      isBulkOperationsActive
     });
 
     // Add styles for product cards
@@ -439,7 +453,7 @@
     document.head.appendChild(styleElement);
 
     // Create product cards
-    auditResultsDiv.innerHTML = `
+    targetResultsDiv.innerHTML = `
       <div class="products-grid">
         ${products.map((p, i) => `
           <div class="product-card" data-index="${i}" data-product-id="${p.id}">
@@ -487,11 +501,11 @@
       </div>
       ${totalPages > 1 ? `
         <div class="pagination">
-          <button id="firstPage" ${currentPage === 1 ? 'disabled' : ''}>⟪ First</button>
-          <button id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
+          <button id="firstPage${isBulkOperationsActive ? 'Bulk' : ''}" ${currentPage === 1 ? 'disabled' : ''}>⟪ First</button>
+          <button id="prevPage${isBulkOperationsActive ? 'Bulk' : ''}" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
           <span class="page-info">Page ${currentPage} of ${totalPages}</span>
-          <button id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
-          <button id="lastPage" ${currentPage === totalPages ? 'disabled' : ''}>Last ⟫</button>
+          <button id="nextPage${isBulkOperationsActive ? 'Bulk' : ''}" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+          <button id="lastPage${isBulkOperationsActive ? 'Bulk' : ''}" ${currentPage === totalPages ? 'disabled' : ''}>Last ⟫</button>
         </div>
       ` : ''}
     `;
@@ -503,8 +517,8 @@
     });
 
     // Attach event listeners
-    attachGeneratePromptListeners(products);
-    attachCompareButtonListeners(products);
+    attachGeneratePromptListeners(products, isBulkOperationsActive);
+    attachCompareButtonListeners(products, isBulkOperationsActive);
     if (totalPages > 1) {
       attachPaginationListeners(totalPages);
     }
@@ -602,9 +616,15 @@
   async function attachPaginationListeners(totalPages) {
     console.log('Attaching pagination listeners, totalPages:', totalPages);
     
+    // Determine which tab is currently active
+    const auditTab = document.getElementById('tab-audit');
+    const bulkOperationsTab = document.getElementById('tab-bulk-operations');
+    const isBulkOperationsActive = bulkOperationsTab && bulkOperationsTab.style.display === 'block';
+    const suffix = isBulkOperationsActive ? 'Bulk' : '';
+    
     // Remove old event listeners by cloning and replacing elements
     ['firstPage', 'prevPage', 'nextPage', 'lastPage'].forEach(id => {
-      const oldElement = document.getElementById(id);
+      const oldElement = document.getElementById(id + suffix);
       if (oldElement) {
         const newElement = oldElement.cloneNode(true);
         oldElement.parentNode.replaceChild(newElement, oldElement);
@@ -612,16 +632,17 @@
     });
 
     // Add pagination event listeners
-    const firstPageBtn = document.getElementById('firstPage');
-    const prevPageBtn = document.getElementById('prevPage');
-    const nextPageBtn = document.getElementById('nextPage');
-    const lastPageBtn = document.getElementById('lastPage');
+    const firstPageBtn = document.getElementById('firstPage' + suffix);
+    const prevPageBtn = document.getElementById('prevPage' + suffix);
+    const nextPageBtn = document.getElementById('nextPage' + suffix);
+    const lastPageBtn = document.getElementById('lastPage' + suffix);
 
     console.log('Found pagination buttons:', {
       first: !!firstPageBtn,
       prev: !!prevPageBtn,
       next: !!nextPageBtn,
-      last: !!lastPageBtn
+      last: !!lastPageBtn,
+      isBulkOperationsActive
     });
 
     if (nextPageBtn) {
@@ -1372,8 +1393,14 @@ Product Details:
   }
 
   // Function to attach compare button listeners
-  function attachCompareButtonListeners(products) {
-    const compareButtons = auditResultsDiv.querySelectorAll('.compare-btn');
+  function attachCompareButtonListeners(products, isBulkOperationsActive = false) {
+    const targetResultsDiv = isBulkOperationsActive ? 
+      document.getElementById('auditResultsBulk') : 
+      document.getElementById('auditResults');
+    
+    if (!targetResultsDiv) return;
+    
+    const compareButtons = targetResultsDiv.querySelectorAll('.compare-btn');
     compareButtons.forEach(btn => {
       btn.addEventListener('click', async () => {
         const productId = btn.dataset.productId;
@@ -1401,8 +1428,14 @@ Product Details:
   }
 
   // Function to attach generate prompt button listeners
-  function attachGeneratePromptListeners(products) {
-    const buttons = auditResultsDiv.querySelectorAll('.generate-prompt-btn');
+  function attachGeneratePromptListeners(products, isBulkOperationsActive = false) {
+    const targetResultsDiv = isBulkOperationsActive ? 
+      document.getElementById('auditResultsBulk') : 
+      document.getElementById('auditResults');
+    
+    if (!targetResultsDiv) return;
+    
+    const buttons = targetResultsDiv.querySelectorAll('.generate-prompt-btn');
     buttons.forEach((btn, i) => {
       btn.addEventListener('click', () => handleGeneratePrompt(btn, products[i]));
     });
@@ -1497,9 +1530,9 @@ Product Details:
             if (targetContent) {
               targetContent.style.display = 'block';
               
-              // If switching to audit tab and we're connected, load products
-              if (target === 'audit' && currentAuth?.isConnected) {
-                console.log('Loading products for audit tab');
+              // If switching to audit tab or bulk-operations tab and we're connected, load products
+              if ((target === 'audit' || target === 'bulk-operations') && currentAuth?.isConnected) {
+                console.log(`Loading products for ${target} tab`);
                 // renderPage();
               }
             }
@@ -1570,6 +1603,45 @@ Product Details:
           console.log('Event listener attached to goToConnection button');
         } else {
           console.log('goToConnection button not found');
+        }
+        
+        // Add event listener for bulk operations tab "Go to Connection" button
+        const goToConnectionBulkBtn = document.getElementById('goToConnectionBulk');
+        if (goToConnectionBulkBtn) {
+          goToConnectionBulkBtn.addEventListener('click', handleGoToConnection);
+        }
+        
+        // Add event listeners for bulk operations tab search
+        const searchProductsBulkBtn = document.getElementById('searchProductsBulk');
+        const productSearchBulkInput = document.getElementById('productSearchBulk');
+        const clearSearchBulkBtn = document.getElementById('clearSearchBulk');
+        
+        if (searchProductsBulkBtn && productSearchBulkInput) {
+          searchProductsBulkBtn.addEventListener('click', () => {
+            const query = productSearchBulkInput.value.trim();
+            if (query) {
+              searchProducts(query, 1);
+            }
+          });
+          
+          productSearchBulkInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              const query = productSearchBulkInput.value.trim();
+              if (query) {
+                searchProducts(query, 1);
+              }
+            }
+          });
+        }
+        
+        if (clearSearchBulkBtn) {
+          clearSearchBulkBtn.addEventListener('click', () => {
+            if (productSearchBulkInput) {
+              productSearchBulkInput.value = '';
+            }
+            clearSearchBulkBtn.style.display = 'none';
+            renderPage();
+          });
         }
         
         initializeCollapsibleSection();
@@ -2024,17 +2096,23 @@ Product Details:
 
   // Function to check connection status and update UI
   function updateConnectionUI(isConnected) {
+    // Handle audit tab elements
     const connectionMessage = document.getElementById('connection-required-message');
     const searchContainer = document.querySelector('.search-container');
     const auditResults = document.getElementById('auditResults');
     const pagination = document.getElementById('pagination');
+
+    // Handle bulk operations tab elements
+    const searchContainerBulk = document.querySelector('#tab-bulk-operations .search-container');
+    const auditResultsBulk = document.getElementById('auditResultsBulk');
+    const paginationBulk = document.getElementById('paginationBulk');
 
     if (!isConnected) {
       // Show connection required message
       if (connectionMessage) {
         connectionMessage.style.display = 'block';
       }
-      // Hide other elements
+      // Hide audit tab elements
       if (searchContainer) {
         searchContainer.style.display = 'none';
       }
@@ -2044,12 +2122,22 @@ Product Details:
       if (pagination) {
         pagination.style.display = 'none';
       }
+      // Hide bulk operations tab elements
+      if (searchContainerBulk) {
+        searchContainerBulk.style.display = 'none';
+      }
+      if (auditResultsBulk) {
+        auditResultsBulk.style.display = 'none';
+      }
+      if (paginationBulk) {
+        paginationBulk.style.display = 'none';
+      }
     } else {
       // Hide connection required message
       if (connectionMessage) {
         connectionMessage.style.display = 'none';
       }
-      // Show other elements
+      // Show audit tab elements
       if (searchContainer) {
         searchContainer.style.display = 'block';
       }
@@ -2058,6 +2146,16 @@ Product Details:
       }
       if (pagination) {
         pagination.style.display = 'block';
+      }
+      // Show bulk operations tab elements
+      if (searchContainerBulk) {
+        searchContainerBulk.style.display = 'block';
+      }
+      if (auditResultsBulk) {
+        auditResultsBulk.style.display = 'block';
+      }
+      if (paginationBulk) {
+        paginationBulk.style.display = 'block';
       }
     }
   }
@@ -2720,9 +2818,9 @@ Please analyze all aspects and return a JSON response with the following structu
 
       .title-cell.improvements {
         background-color: #d4edda;
-        border-left: 4px solid #28a745;
+        border-left: 4px solidrgb(218, 220, 219);
         font-style: italic;
-        color: #155724;
+        color:rgb(228, 229, 228);
       }
 
       .title-cell.score {
@@ -3536,18 +3634,30 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
 
   // Check authentication status and show connection notice if needed
   function checkAuthStatus() {
-    const authData = localStorage.getItem('wooAuth');
-    const connectionNotice = document.getElementById('connectionNotice');
+    const authData = JSON.parse(localStorage.getItem('wooAuth'));
+    const isConnected = authData?.wooAuth?.isConnected;
     
-    if (!authData || !JSON.parse(authData).wooAuth) {
-      if (connectionNotice) {
-        connectionNotice.style.display = 'block';
-      }
-    } else {
-      if (connectionNotice) {
-        connectionNotice.style.display = 'none';
-      }
+    // Update connection notices for both tabs
+    const connectionNotice = document.getElementById('connectionNotice');
+    const connectionNoticeBulk = document.getElementById('connectionNoticeBulk');
+    
+    if (connectionNotice) {
+      connectionNotice.style.display = isConnected ? 'none' : 'block';
     }
+    
+    if (connectionNoticeBulk) {
+      connectionNoticeBulk.style.display = isConnected ? 'none' : 'block';
+    }
+    
+    // Update auth status text
+    const authStatusText = document.getElementById('authStatusText');
+    if (authStatusText) {
+      authStatusText.textContent = isConnected ? 'Connected' : 'Not Connected';
+      authStatusText.className = isConnected ? 'connected' : 'disconnected';
+    }
+    
+    // Update UI based on connection status
+    updateConnectionUI(isConnected);
   }
 
   // Handle "Go to Connection" button click
@@ -3641,9 +3751,9 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
             if (targetContent) {
               targetContent.style.display = 'block';
               
-              // If switching to audit tab and we're connected, load products
-              if (target === 'audit' && currentAuth?.isConnected) {
-                console.log('Loading products for audit tab');
+              // If switching to audit tab or bulk-operations tab and we're connected, load products
+              if ((target === 'audit' || target === 'bulk-operations') && currentAuth?.isConnected) {
+                console.log(`Loading products for ${target} tab`);
                 // renderPage();
               }
             }
@@ -3714,6 +3824,45 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
           console.log('Event listener attached to goToConnection button');
         } else {
           console.log('goToConnection button not found');
+        }
+        
+        // Add event listener for bulk operations tab "Go to Connection" button
+        const goToConnectionBulkBtn = document.getElementById('goToConnectionBulk');
+        if (goToConnectionBulkBtn) {
+          goToConnectionBulkBtn.addEventListener('click', handleGoToConnection);
+        }
+        
+        // Add event listeners for bulk operations tab search
+        const searchProductsBulkBtn = document.getElementById('searchProductsBulk');
+        const productSearchBulkInput = document.getElementById('productSearchBulk');
+        const clearSearchBulkBtn = document.getElementById('clearSearchBulk');
+        
+        if (searchProductsBulkBtn && productSearchBulkInput) {
+          searchProductsBulkBtn.addEventListener('click', () => {
+            const query = productSearchBulkInput.value.trim();
+            if (query) {
+              searchProducts(query, 1);
+            }
+          });
+          
+          productSearchBulkInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              const query = productSearchBulkInput.value.trim();
+              if (query) {
+                searchProducts(query, 1);
+              }
+            }
+          });
+        }
+        
+        if (clearSearchBulkBtn) {
+          clearSearchBulkBtn.addEventListener('click', () => {
+            if (productSearchBulkInput) {
+              productSearchBulkInput.value = '';
+            }
+            clearSearchBulkBtn.style.display = 'none';
+            renderPage();
+          });
         }
         
         initializeCollapsibleSection();

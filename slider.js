@@ -2152,9 +2152,11 @@ Product Details:
 
       // Disable compare button during generation
       if (compareBtn) {
-        compareBtn.disabled = true;
-        compareBtn.style.opacity = '0.5';
-        compareBtn.innerHTML = '<i class="fas fa-clock"></i> Waiting for ChatGPT...';
+        compareBtn.disabled = false;
+        compareBtn.style.opacity = '0.7';
+        compareBtn.style.cursor = 'not-allowed';
+        compareBtn.style.pointerEvents = 'none';
+        compareBtn.innerHTML = '<div style="width: 16px; height: 16px; border: 2px solid #667eea; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;"></div>';
       }
 
       // Use the stored products
@@ -2233,9 +2235,11 @@ Please analyze all aspects and return a JSON response with the following structu
 
       // Enable compare button after prompt is sent
       if (compareBtn) {
-        compareBtn.disabled = true;
-        compareBtn.style.opacity = '0.5';
-        compareBtn.innerHTML = '<i class="fas fa-clock"></i> Waiting for ChatGPT...';
+        compareBtn.disabled = false;
+        compareBtn.style.opacity = '0.7';
+        compareBtn.style.cursor = 'not-allowed';
+        compareBtn.style.pointerEvents = 'none';
+        compareBtn.innerHTML = '<div style="width: 16px; height: 16px; border: 2px solid #667eea; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;"></div>';
       }
 
       // Start monitoring ChatGPT response
@@ -2288,6 +2292,8 @@ Please analyze all aspects and return a JSON response with the following structu
         if (compareBtn) {
           compareBtn.disabled = false;
           compareBtn.style.opacity = '1';
+          compareBtn.style.cursor = 'pointer';
+          compareBtn.style.pointerEvents = 'auto';
           compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Titles';
         }
         
@@ -2334,6 +2340,8 @@ Please analyze all aspects and return a JSON response with the following structu
         if (compareBtn) {
           compareBtn.disabled = false;
           compareBtn.style.opacity = '1';
+          compareBtn.style.cursor = 'pointer';
+          compareBtn.style.pointerEvents = 'auto';
           compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Titles';
         }
         
@@ -2966,9 +2974,11 @@ Please analyze all aspects and return a JSON response with the following structu
 
       // Disable compare button during generation
       if (compareBtn) {
-        compareBtn.disabled = true;
-        compareBtn.style.opacity = '0.5';
-        compareBtn.innerHTML = '<i class="fas fa-clock"></i> Waiting for ChatGPT...';
+        compareBtn.disabled = false;
+        compareBtn.style.opacity = '0.7';
+        compareBtn.style.cursor = 'not-allowed';
+        compareBtn.style.pointerEvents = 'none';
+        compareBtn.innerHTML = '<div style="width: 16px; height: 16px; border: 2px solid #667eea; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;"></div>';
       }
 
       // Use the stored products
@@ -3047,9 +3057,11 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
 
       // Enable compare button after prompt is sent
       if (compareBtn) {
-        compareBtn.disabled = true;
-        compareBtn.style.opacity = '0.5';
-        compareBtn.innerHTML = '<i class="fas fa-clock"></i> Waiting for ChatGPT...';
+        compareBtn.disabled = false;
+        compareBtn.style.opacity = '0.7';
+        compareBtn.style.cursor = 'not-allowed';
+        compareBtn.style.pointerEvents = 'none';
+        compareBtn.innerHTML = '<div style="width: 16px; height: 16px; border: 2px solid #667eea; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;"></div>';
       }
 
       // Start monitoring ChatGPT response
@@ -3159,6 +3171,8 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
         if (compareBtn) {
           compareBtn.disabled = false;
           compareBtn.style.opacity = '1';
+          compareBtn.style.cursor = 'pointer';
+          compareBtn.style.pointerEvents = 'auto';
           compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Descriptions';
         }
         
@@ -3208,6 +3222,8 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
         if (compareBtn) {
           compareBtn.disabled = false;
           compareBtn.style.opacity = '1';
+          compareBtn.style.cursor = 'pointer';
+          compareBtn.style.pointerEvents = 'auto';
           compareBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Compare Descriptions';
         }
         

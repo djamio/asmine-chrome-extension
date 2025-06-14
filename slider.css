@@ -249,7 +249,13 @@ body.slider-open .my-slider-toggle-btn {
 }
 
 .tag {
-  background: #e3f2fd;
-  color: #1565c0;
-  border: 1px solid #bbdefb;
+  background: #e1f5fe;
+  color: #0277bd;
+  border: 1px solid #b3e5fc;
+}
+
+/* Spinner animation for loading states */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

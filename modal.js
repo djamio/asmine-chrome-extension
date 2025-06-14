@@ -250,6 +250,73 @@ function createAuditModal() {
       color: #96588a;
     }
 
+    .score-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 700;
+      margin-left: 12px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      animation: scorePulse 2s ease-in-out infinite;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .score-badge::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .score-badge:hover::before {
+      left: 100%;
+    }
+
+    /* Color coding based on score ranges */
+    .score-badge[data-score]:not([data-score=""]) {
+      background: var(--score-color, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    }
+
+    .score-badge[data-score="0"],
+    .score-badge[data-score="1"],
+    .score-badge[data-score="2"],
+    .score-badge[data-score="3"],
+    .score-badge[data-score="4"],
+    .score-badge[data-score="5"] {
+      --score-color: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+
+    .score-badge[data-score="6"],
+    .score-badge[data-score="7"] {
+      --score-color: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    }
+
+    .score-badge[data-score="8"],
+    .score-badge[data-score="9"],
+    .score-badge[data-score="10"] {
+      --score-color: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+
+    @keyframes scorePulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .score-badge:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s ease;
+    }
+
     .analysis {
       margin-top: 10px;
       padding: 10px;

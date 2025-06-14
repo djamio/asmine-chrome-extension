@@ -1092,16 +1092,19 @@ Product Details:
 
     // Helper function to create a comparison block
     function createComparisonBlock(original, suggested, score, analysis, field) {
+      // Calculate score out of 10 for color coding
+      const scoreOutOf10 = Math.round((score || 0) / 10);
+      
       return `
         <div class="comparison-container">
           <div class="version-block original">
-            <h4>Current Version</h4>
+            <h4>Current Version <span class="score-badge" data-score="${scoreOutOf10}">Score: ${score || 0}/100</span></h4>
             <div class="content-box">
               <div class="original-content">${original}</div>
             </div>
           </div>
           <div class="version-block suggested">
-            <h4>Enhanced Version <span class="score">(Score: ${score || 0}/100)</span></h4>
+            <h4>Enhanced Version</h4>
             <div class="content-box">
               <div class="suggested-content" contenteditable="true">${suggested}</div>
             </div>
@@ -1260,9 +1263,12 @@ Product Details:
     // Update global analysis tab
     const analysisTab = modal.querySelector('#tab-analysis');
     if (analysisTab) {
+      // Calculate global score out of 10 for color coding
+      const globalScoreOutOf10 = Math.round((auditResults.globalScore || 0) / 10);
+      
       analysisTab.innerHTML = `
         <div class="global-analysis">
-          <h3>Global Score: ${auditResults.globalScore || 0}/100</h3>
+          <h3>Global Score: <span class="score-badge" data-score="${globalScoreOutOf10}">${auditResults.globalScore || 0}/100</span></h3>
           <div class="analysis-content">
             <h4>Overall Analysis</h4>
             <p>${auditResults.overallAnalysis || 'No analysis available'}</p>

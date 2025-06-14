@@ -256,6 +256,14 @@
       return;
     }
 
+    console.log('displayProductsList called with:', {
+      productsCount: products.length,
+      totalProducts,
+      totalPages,
+      currentPage,
+      isSearchMode: !!window.currentSearchQuery
+    });
+
     // Add styles for product cards
     const styleElement = document.createElement('style');
     styleElement.textContent = `
@@ -475,6 +483,7 @@
       </div>
       <div class="products-summary">
         <p>Total Products: ${totalProducts}</p>
+        ${window.currentSearchQuery ? `<p>Search results for: "${window.currentSearchQuery}"</p>` : ''}
       </div>
       ${totalPages > 1 ? `
         <div class="pagination">
@@ -486,6 +495,12 @@
         </div>
       ` : ''}
     `;
+
+    console.log('Pagination condition check:', {
+      totalPages,
+      shouldShowPagination: totalPages > 1,
+      currentPage
+    });
 
     // Attach event listeners
     attachGeneratePromptListeners(products);
@@ -609,13 +624,23 @@
       last: !!lastPageBtn
     });
 
+    // Check if we're in search mode
+    const isSearchMode = window.currentSearchQuery && window.currentSearchQuery.length > 0;
+    const currentPage = isSearchMode ? window.currentSearchPage : window.currentPage || 1;
+
     if (nextPageBtn) {
       nextPageBtn.onclick = async () => {
         console.log('Next button clicked, current page:', currentPage, 'total pages:', totalPages);
         if (currentPage < totalPages && currentAuth?.isConnected) {
-        currentPage++;
-          console.log('Moving to page:', currentPage);
-          await renderPage();
+          if (isSearchMode) {
+            // Handle search pagination
+            window.currentSearchPage++;
+            await searchProducts(window.currentSearchQuery, window.currentSearchPage);
+          } else {
+            // Handle regular product pagination
+            window.currentPage = (window.currentPage || 1) + 1;
+            await renderPage();
+          }
         }
       };
     }
@@ -624,9 +649,15 @@
       prevPageBtn.onclick = async () => {
         console.log('Previous button clicked, current page:', currentPage);
         if (currentPage > 1 && currentAuth?.isConnected) {
-          currentPage--;
-          console.log('Moving to page:', currentPage);
-          await renderPage();
+          if (isSearchMode) {
+            // Handle search pagination
+            window.currentSearchPage--;
+            await searchProducts(window.currentSearchQuery, window.currentSearchPage);
+          } else {
+            // Handle regular product pagination
+            window.currentPage = (window.currentPage || 1) - 1;
+            await renderPage();
+          }
         }
       };
     }
@@ -635,9 +666,15 @@
       firstPageBtn.onclick = async () => {
         console.log('First button clicked, current page:', currentPage);
         if (currentPage !== 1 && currentAuth?.isConnected) {
-          currentPage = 1;
-          console.log('Moving to first page');
-          await renderPage();
+          if (isSearchMode) {
+            // Handle search pagination
+            window.currentSearchPage = 1;
+            await searchProducts(window.currentSearchQuery, window.currentSearchPage);
+          } else {
+            // Handle regular product pagination
+            window.currentPage = 1;
+            await renderPage();
+          }
         }
       };
     }
@@ -646,9 +683,15 @@
       lastPageBtn.onclick = async () => {
         console.log('Last button clicked, current page:', currentPage, 'total pages:', totalPages);
         if (currentPage !== totalPages && currentAuth?.isConnected) {
-        currentPage = totalPages;
-          console.log('Moving to last page:', totalPages);
-          await renderPage();
+          if (isSearchMode) {
+            // Handle search pagination
+            window.currentSearchPage = totalPages;
+            await searchProducts(window.currentSearchQuery, window.currentSearchPage);
+          } else {
+            // Handle regular product pagination
+            window.currentPage = totalPages;
+            await renderPage();
+          }
         }
       };
     }
@@ -1354,6 +1397,10 @@ Product Details:
       return;
     }
 
+    // Clear search mode when loading regular products
+    window.currentSearchQuery = null;
+    window.currentSearchPage = null;
+
     // Check if we have current auth state
     if (!currentAuth?.isConnected) {
       console.log('No auth state, checking storage');
@@ -1783,6 +1830,7 @@ Product Details:
     
     const searchButton = document.getElementById('searchProducts');
     const searchInput = document.getElementById('productSearch');
+    const clearSearchButton = document.getElementById('clearSearch');
 
     if (searchButton && searchInput) {
       console.log('Search elements found, adding listeners');
@@ -1804,6 +1852,31 @@ Product Details:
           if (query) {
             searchProducts(query);
           }
+        }
+      });
+
+      // Clear search button handler
+      if (clearSearchButton) {
+        clearSearchButton.addEventListener('click', () => {
+          console.log('Clear search button clicked');
+          searchInput.value = '';
+          clearSearchButton.style.display = 'none';
+          
+          // Clear search mode and return to regular product listing
+          window.currentSearchQuery = null;
+          window.currentSearchPage = null;
+          
+          // Reload regular products
+          if (currentAuth?.isConnected) {
+            renderPage();
+          }
+        });
+      }
+
+      // Show/hide clear button based on input
+      searchInput.addEventListener('input', () => {
+        if (clearSearchButton) {
+          clearSearchButton.style.display = searchInput.value.trim() ? 'block' : 'none';
         }
       });
 
@@ -1830,9 +1903,9 @@ Product Details:
   }
 
   // Function to search products
-  async function searchProducts(query) {
+  async function searchProducts(query, page = 1) {
     try {
-      console.log('Searching products with query:', query);
+      console.log('Searching products with query:', query, 'page:', page);
       
       // Get WooAuth instance and credentials
       const authData = JSON.parse(localStorage.getItem('wooAuth'));
@@ -1857,7 +1930,7 @@ Product Details:
 
       console.log('Making search API request...');
       
-      // Make the API request
+      // Make the API request with pagination
       const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/search`, {
         method: 'POST',
         headers: {
@@ -1866,7 +1939,11 @@ Product Details:
           'x-woo-consumer-key': consumerKey,
           'x-woo-consumer-secret': consumerSecret
         },
-        body: JSON.stringify({ query })
+        body: JSON.stringify({ 
+          query,
+          page: page,
+          per_page: 10 // Set items per page
+        })
       });
 
       if (!response.ok) {
@@ -1877,9 +1954,31 @@ Product Details:
       const data = await response.json();
       console.log('Search response:', data);
       
-
       if (data.products && data.products.length > 0) {
-        displayProductsList(data.products, data.totalProducts || data.products.length, data.total_pages || 1, data.current_page || 1);
+        // Store search query for pagination
+        window.currentSearchQuery = query;
+        window.currentSearchPage = page;
+        
+        // Calculate pagination data if not provided by API
+        const totalProducts = data.totalProducts || data.total || data.products.length;
+        const perPage = 10; // Should match the per_page parameter sent to API
+        const totalPages = data.total_pages || Math.ceil(totalProducts / perPage);
+        
+        // TEMPORARY: Force pagination for testing (remove this later)
+        const forcePagination = true; // Set to false to disable
+        const finalTotalPages = forcePagination ? Math.max(totalPages, 2) : totalPages;
+        
+        console.log('Pagination data:', {
+          totalProducts,
+          totalPages,
+          finalTotalPages,
+          currentPage: page,
+          productsCount: data.products.length,
+          perPage,
+          forcePagination
+        });
+        
+        displayProductsList(data.products, totalProducts, finalTotalPages, page);
         currentProducts = data.products;
 
       } else {

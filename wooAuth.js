@@ -663,8 +663,10 @@ function initWooAuth() {
     if (!window.wooAuth) {
       console.log('Initializing WooAuth instance');
       try {
-        window.wooAuth = new WooAuth();
-        window.wooAuth.init().catch(error => {
+        if (typeof window !== 'undefined') {
+          window.WooAuth = WooAuth;
+        }
+                window.wooAuth.init().catch(error => {
           console.error('Error initializing WooAuth:', error);
         });
       } catch (error) {
@@ -672,4 +674,9 @@ function initWooAuth() {
       }
     }
   }, 1000);
+}
+
+// Ensure WooAuth is available globally
+if (typeof window !== 'undefined') {
+  window.WooAuth = WooAuth;
 } 

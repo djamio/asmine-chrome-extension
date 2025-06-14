@@ -11,10 +11,7 @@
     "128": "icons/icon16.png"
   },
   "permissions": [
-    "activeTab",
-    "scripting",
     "storage",
-    "identity",
     "clipboardWrite"
   ],
   "host_permissions": [

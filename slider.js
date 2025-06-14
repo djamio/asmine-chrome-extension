@@ -489,6 +489,14 @@
                   </svg>
                   Compare
                 </button>
+                <button class="view-in-woo-btn" data-product-id="${p.id}" title="View in WooCommerce">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15,3 21,3 21,9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                  View in Woo
+                </button>
               </div>
               <div class="audit-results"></div>
             </div>
@@ -1438,6 +1446,18 @@ Product Details:
     const buttons = targetResultsDiv.querySelectorAll('.generate-prompt-btn');
     buttons.forEach((btn, i) => {
       btn.addEventListener('click', () => handleGeneratePrompt(btn, products[i]));
+    });
+    
+    // Add event listeners for "View in WooCommerce" buttons
+    const viewInWooButtons = targetResultsDiv.querySelectorAll('.view-in-woo-btn');
+    viewInWooButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const productId = btn.getAttribute('data-product-id');
+        const product = products.find(p => p.id == productId);
+        if (product) {
+          openProductInWooCommerce(product);
+        }
+      });
     });
   }
 
@@ -3868,5 +3888,48 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
         initializeCollapsibleSection();
       })
       .catch(error => console.error('Error injecting slider:', error));
+  }
+
+  // Function to open product in WooCommerce
+  function openProductInWooCommerce(product) {
+    try {
+      // Check if we have the permalink in additionalData
+      if (product.additionalData && product.additionalData.permalink) {
+        const productUrl = product.additionalData.permalink;
+        console.log('Opening product URL from permalink:', productUrl);
+        window.open(productUrl, '_blank');
+        return;
+      }
+      
+      // Fallback: Get the WooCommerce store URL from localStorage
+      const authData = JSON.parse(localStorage.getItem('wooAuth'));
+      if (!authData?.wooAuth?.storeUrl) {
+        console.error('No WooCommerce store URL found');
+        alert('WooCommerce store URL not found. Please reconnect to your store.');
+        return;
+      }
+      
+      const storeUrl = authData.wooAuth.storeUrl;
+      
+      // Construct the product URL as fallback
+      // WooCommerce product URLs typically follow this pattern: /product/product-slug/
+      // If we have a slug, use it; otherwise, use the product ID
+      let productUrl;
+      if (product.slug) {
+        productUrl = `${storeUrl}/product/${product.slug}/`;
+      } else {
+        // Fallback to using product ID
+        productUrl = `${storeUrl}/product/${product.id}/`;
+      }
+      
+      console.log('Opening product URL (fallback):', productUrl);
+      
+      // Open in new tab
+      window.open(productUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Error opening product in WooCommerce:', error);
+      alert('Error opening product. Please check your WooCommerce connection.');
+    }
   }
 })();

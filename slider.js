@@ -396,36 +396,70 @@
       }
 
       .button-group {
-        display: flex;
-        gap: 10px;
-        margin-top: 15px;
-        flex-direction: row;
-        align-items: stretch;
+        display: flex !important;
+        gap: 8px !important;
+        margin-top: 15px !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
       }
 
-      .generate-prompt-btn, .compare-btn {
-        flex: 1;
-        padding: 8px 12px;
-        border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        min-width: 0;
+      .button-group .generate-prompt-btn, 
+      .button-group .view-in-woo-btn {
+        width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        cursor: pointer !important;
+        transition: all 0.2s !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
+        box-sizing: border-box !important;
+        position: relative !important;
+      }
+
+      .generate-prompt-btn svg, .view-in-woo-btn svg {
+        width: 18px;
+        height: 18px;
+        display: block;
       }
 
       .generate-prompt-btn {
-        background: #4CAF50;
-        color: white;
+        background: #4CAF50 !important;
+        color: white !important;
       }
 
       .generate-prompt-btn:hover {
-        background: #43A047;
+        background: #43A047 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3) !important;
+      }
+
+      .view-in-woo-btn {
+        background: #2196F3 !important;
+        color: white !important;
+      }
+
+      .view-in-woo-btn:hover {
+        background: #1E88E5 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3) !important;
+      }
+
+      .generate-prompt-btn:disabled {
+        background: #ccc !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
       }
 
       .compare-btn {
@@ -478,18 +512,16 @@
               </div>
               <div class="button-group">
                 <button class="generate-prompt-btn" data-product-id="${p.id}" title="Generate ChatGPT Audit">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                   </svg>
-                  Generate Audit
                 </button>
                 <button class="view-in-woo-btn" data-product-id="${p.id}" title="View in WooCommerce">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                     <polyline points="15,3 21,3 21,9"/>
                     <line x1="10" y1="14" x2="21" y2="3"/>
                   </svg>
-                  View in Woo
                 </button>
               </div>
               <div class="audit-results"></div>
@@ -778,15 +810,13 @@
       btn.disabled = true;
       btn.innerHTML = `
         <div class="loading-spinner-small"></div>
-        Generating Audit...
       `;
 
       // Store the request start time to track when this request was initiated
       const requestStartTime = Date.now();
       console.log('Starting new audit request at:', requestStartTime);
 
-      const prompt = `
-Audit the following WooCommerce product and provide a comprehensive analysis:
+      const prompt = `Audit the following WooCommerce product and provide a comprehensive analysis:
 
 Product Details:
 - Title: ${product.title}
@@ -963,10 +993,9 @@ Please ensure the response is valid JSON and includes all required fields.
               // Reset generate button state
               btn.disabled = false;
               btn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
-                Generate Audit
               `;
 
               // Disconnect the observer since we've found and processed the response
@@ -1011,10 +1040,9 @@ Please ensure the response is valid JSON and includes all required fields.
         // Reset button states if we couldn't find the target node
         btn.disabled = false;
         btn.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
-          Generate Audit
         `;
       }
 
@@ -1022,10 +1050,9 @@ Please ensure the response is valid JSON and includes all required fields.
       console.error('Error in handleGeneratePrompt:', error);
       btn.disabled = false;
       btn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
         </svg>
-        Generate Audit
       `;
     }
   }

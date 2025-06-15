@@ -1234,4 +1234,312 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Remove compare button styles - no longer needed */ 
+/* Remove compare button styles - no longer needed */
+
+/* Pricing Analysis Button Styles */
+.pricing-analysis-btn {
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  background: #FF6B35 !important;
+  color: white !important;
+}
+
+.pricing-analysis-btn:hover {
+  background: #E55A2B !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3) !important;
+}
+
+.pricing-analysis-btn:disabled {
+  background: #ccc !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.pricing-analysis-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* Pricing Results Display */
+.pricing-results {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 6px;
+  background: #fff3e0;
+  display: none;
+  border-left: 4px solid #FF6B35;
+}
+
+.pricing-summary h4 {
+  margin: 0 0 10px 0;
+  color: #FF6B35;
+  font-size: 16px;
+}
+
+.pricing-summary p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Pricing Modal Styles */
+.pricing-modal {
+  background-color: white;
+  margin: 5% auto;
+  padding: 0;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.pricing-modal .modal-header {
+  background: linear-gradient(135deg, #FF6B35 0%, #E55A2B 100%);
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pricing-modal .modal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.close-pricing-modal {
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-pricing-modal:hover {
+  opacity: 0.8;
+}
+
+.pricing-modal .modal-content {
+  padding: 0;
+  max-height: calc(80vh - 80px);
+  overflow-y: auto;
+}
+
+/* Pricing Tabs */
+.pricing-tabs {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.pricing-tab-btn {
+  flex: 1;
+  padding: 15px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.pricing-tab-btn:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+.pricing-tab-btn.active {
+  background: white;
+  color: #FF6B35;
+  border-bottom: 3px solid #FF6B35;
+}
+
+.pricing-tab-content {
+  display: none;
+  padding: 30px;
+}
+
+.pricing-tab-content.active {
+  display: block;
+}
+
+/* Current Product Tab */
+.current-product-info h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.product-details p {
+  margin: 10px 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.product-details strong {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Market Comparisons Tab */
+.market-comparisons h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.comparisons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.comparison-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.comparison-item h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.comparison-item p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.comparison-item a {
+  color: #FF6B35;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.comparison-item a:hover {
+  text-decoration: underline;
+}
+
+/* Pricing Analysis Tab */
+.pricing-analysis-details h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.analysis-summary {
+  display: grid;
+  gap: 25px;
+}
+
+.pricing-position h4,
+.price-recommendation h4,
+.recommendation-text h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.position-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.position-badge.competitive {
+  background: #d4edda;
+  color: #155724;
+}
+
+.position-badge.underpriced {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.position-badge.overpriced {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.price-recommendation p {
+  margin: 10px 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.price-recommendation strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.recommendation-text p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #666;
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #FF6B35;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .pricing-modal {
+    width: 95%;
+    margin: 10% auto;
+  }
+  
+  .pricing-tabs {
+    flex-direction: column;
+  }
+  
+  .pricing-tab-btn {
+    text-align: left;
+  }
+  
+  .comparisons-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .pricing-modal .modal-content {
+    padding: 20px;
+  }
+  
+  .pricing-tab-content {
+    padding: 20px;
+  }
+} 

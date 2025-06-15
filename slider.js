@@ -406,6 +406,7 @@
       }
 
       .button-group .generate-prompt-btn, 
+      .button-group .pricing-analysis-btn,
       .button-group .view-in-woo-btn {
         width: 40px !important;
         height: 40px !important;
@@ -516,6 +517,11 @@
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                   </svg>
                 </button>
+                <button class="pricing-analysis-btn" data-product-id="${p.id}" title="Analyze Product Pricing">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
+                </button>
                 <button class="view-in-woo-btn" data-product-id="${p.id}" title="View in WooCommerce">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
@@ -525,6 +531,7 @@
                 </button>
               </div>
               <div class="audit-results"></div>
+              <div class="pricing-results"></div>
             </div>
           </div>
         `).join('')}
@@ -1475,6 +1482,18 @@ Please ensure the response is valid JSON and includes all required fields.
         const product = products.find(p => p.id == productId);
         if (product) {
           openProductInWooCommerce(product);
+        }
+      });
+    });
+
+    // Add event listeners for pricing analysis buttons
+    const pricingButtons = targetResultsDiv.querySelectorAll('.pricing-analysis-btn');
+    pricingButtons.forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        if (window.PricingAnalyzer && window.PricingAnalyzer.handlePricingAnalysis) {
+          window.PricingAnalyzer.handlePricingAnalysis(btn, products[i]);
+        } else {
+          console.error('PricingAnalyzer not loaded');
         }
       });
     });

@@ -32,7 +32,7 @@
     {
       "matches": ["https://chatgpt.com/*"],
       "css": ["styles.css", "modal.css", "slider.css"],
-      "js": ["wooAuth.js", "modal.js", "slider.js"],
+      "js": ["wooAuth.js", "modal.js", "slider.js", "pricingAnalyzer.js"],
       "run_at": "document_idle"
     }
   ]

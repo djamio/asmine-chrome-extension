@@ -40,7 +40,7 @@
 
 I will provide you with a product's title, description, and price. Your task is to:
 
-1. Search for **at least 3 similar products** available on the market (e.g., Amazon, eBay, Walmart, Nike.com).
+1. Search for **at least 3 similar products** available on the market (e.g., Amazon, eBay, Walmart, Nike.com, etc..).
 2. Return their:
    - Title
    - Price
@@ -53,8 +53,7 @@ Current Product Details:
 - Title: ${product.title || product.name}
 - Description: ${product.description || product.short_description || 'No description available'}
 - Current Price: $${product.price || 0}
-- Categories: ${JSON.stringify(product.categories || [])}
-- Tags: ${JSON.stringify(product.tags || [])}
+- specifications: ${JSON.stringify(product.specifications || [])}
 
 Return your answer in the following **JSON format**:
 

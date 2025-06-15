@@ -408,6 +408,7 @@
       .button-group .generate-prompt-btn, 
       .button-group .pricing-analysis-btn,
       .button-group .market-research-btn,
+      .button-group .review-generator-btn,
       .button-group .view-in-woo-btn {
         width: 40px !important;
         height: 40px !important;
@@ -462,6 +463,39 @@
         cursor: not-allowed !important;
         transform: none !important;
         box-shadow: none !important;
+      }
+
+      .pricing-analysis-btn {
+        background: #FF6B35 !important;
+        color: white !important;
+      }
+
+      .pricing-analysis-btn:hover {
+        background: #E55A2B !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3) !important;
+      }
+
+      .market-research-btn {
+        background: #8B5CF6 !important;
+        color: white !important;
+      }
+
+      .market-research-btn:hover {
+        background: #7C3AED !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3) !important;
+      }
+
+      .review-generator-btn {
+        background: #10B981 !important;
+        color: white !important;
+      }
+
+      .review-generator-btn:hover {
+        background: #059669 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
       }
 
       .compare-btn {
@@ -526,6 +560,11 @@
                 <button class="market-research-btn" data-product-id="${p.id}" title="Market Research Analysis">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-1.94-3.07M9 19v-3.87a3.37 3.37 0 0 1 1.94-3.07M9 19v-6m0 0V9a3 3 0 0 1 3-3h0a3 3 0 0 1 3 3v0m-6 0h6m-6 0H9"/>
+                  </svg>
+                </button>
+                <button class="review-generator-btn" data-product-id="${p.id}" title="Generate Product Reviews">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                   </svg>
                 </button>
                 <button class="view-in-woo-btn" data-product-id="${p.id}" title="View in WooCommerce">
@@ -1515,6 +1554,18 @@ Please ensure the response is valid JSON and includes all required fields.
         }
       });
     });
+
+    // Add event listeners for review generator buttons
+    const reviewGeneratorButtons = targetResultsDiv.querySelectorAll('.review-generator-btn');
+    reviewGeneratorButtons.forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        if (window.ReviewGenerator && window.ReviewGenerator.handleReviewGeneration) {
+          window.ReviewGenerator.handleReviewGeneration(btn, products[i]);
+        } else {
+          console.error('ReviewGenerator not loaded');
+        }
+      });
+    });
   }
 
   async function renderPage() {
@@ -1870,7 +1921,7 @@ Please ensure the response is valid JSON and includes all required fields.
 
             return {
               reviewer: authorMatch ? authorMatch[1].trim() : 'Anonymous',
-              date_created: dateMatch ? dateMatch[1].trim() : new Date().toISOString().split('T')[0],
+              date: dateMatch ? dateMatch[1].trim() : new Date().toISOString().split('T')[0],
               rating: rating,
               review: contentMatch ? contentMatch[1].trim() : '',
               verified: true,

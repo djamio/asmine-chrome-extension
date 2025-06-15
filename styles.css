@@ -827,6 +827,15 @@
   background: #dc3545;
 }
 
+.notification.warning {
+  border-left-color: #f59e0b;
+}
+
+.notification.warning .notification-icon {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
 @keyframes slideIn {
   from {
     transform: translateY(100%);

@@ -39,7 +39,7 @@ Given the following product information:
 - Description: ${product.description || product.short_description || 'No description available'}
 - Specifications: ${JSON.stringify(product.specifications || [])}
 
-Generate 10 realistic product reviews as JSON. Each review should include:
+Generate 20 realistic product reviews as JSON. Each review should include:
 - reviewerName: A realistic-sounding name
 - review: A short, natural-sounding review text (2–4 sentences) relevant to the product
 - rating: Integer from 1 to 5
@@ -56,7 +56,7 @@ Return the response in the following format:
   }
 ]
 
-Please ensure the response is valid JSON and includes exactly 10 reviews with all required fields. make sure you use the same lanuguage 
+Please ensure the response is valid JSON and includes exactly 20 reviews with all required fields. make sure you use the same lanuguage 
 as the product description and title`;
 
       // Find ChatGPT's input area and send the prompt
@@ -108,7 +108,7 @@ as the product description and title`;
           // Use the extractLastJSONFromChatGPT function with validator
           const parsed = extractLastJSONFromChatGPT((json) => {
             // Check if this is a valid review generation response
-            const isValidStructure = Array.isArray(json) && json.length === 10;
+            const isValidStructure = Array.isArray(json) && json.length === 20;
             const hasValidReviews = json.every(review => 
               review.reviewerName && 
               review.review && 
@@ -375,7 +375,7 @@ as the product description and title`;
       
       // Get all reviews from the modal
       const reviewItems = document.querySelectorAll('.review-item');
-      const reviews = Array.from(reviewItems).map(item => {
+      const allReviews = Array.from(reviewItems).map(item => {
         const index = item.getAttribute('data-review-index');
         const reviewerName = item.querySelector('.reviewer-name').value;
         const rating = parseInt(item.querySelector('.rating-select').value);
@@ -390,7 +390,7 @@ as the product description and title`;
         };
       });
 
-      console.log('Collected reviews:', reviews);
+      console.log('Collected reviews:', allReviews);
 
       // Get product ID from the modal
       const modal = document.getElementById('reviewGeneratorModal');
@@ -411,55 +411,105 @@ as the product description and title`;
         throw new Error('Missing WooCommerce credentials. Please reconnect to WooCommerce.');
       }
 
-      // Prepare the request payload
-      const payload = {
-        reviews: reviews
-      };
-
-      console.log('Sending payload to backend:', payload);
-      console.log('Product ID:', productId);
-      console.log('Number of reviews:', reviews.length);
-
       // Show loading state
       const insertBtn = document.querySelector('#insert-reviews-btn');
-      const originalText = insertBtn.innerHTML;
       insertBtn.disabled = true;
-      insertBtn.innerHTML = `
-        <div class="loading-spinner-small"></div>
-        Inserting Reviews...
-      `;
 
-      // Make the API call to your backend
-      const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${productId}/reviews`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-woo-store-url': credentials.storeUrl,
-          'x-woo-consumer-key': credentials.consumerKey,
-          'x-woo-consumer-secret': credentials.consumerSecret
-        },
-        body: JSON.stringify(payload)
-      });
+      // Split reviews into batches of 5
+      const batchSize = 5;
+      const batches = [];
+      for (let i = 0; i < allReviews.length; i += batchSize) {
+        batches.push(allReviews.slice(i, i + batchSize));
+      }
 
-      const result = await response.json();
+      console.log(`Sending ${batches.length} batches of reviews (${allReviews.length} total reviews)`);
 
-      if (response.ok && result.success) {
-        console.log('Reviews inserted successfully:', result);
-        
-        // Show success message
-        showNotification('Reviews inserted successfully!', 'success');
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      // Process each batch
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        const batchNumber = batchIndex + 1;
+        const totalBatches = batches.length;
+
+        // Update button text to show progress
+        insertBtn.innerHTML = `
+          <div class="loading-spinner-small"></div>
+          Inserting Batch ${batchNumber}/${totalBatches}...
+        `;
+
+        try {
+          console.log(`Sending batch ${batchNumber}/${totalBatches} with ${batch.length} reviews`);
+
+          // Prepare the request payload for this batch
+          const payload = {
+            reviews: batch
+          };
+
+          // Make the API call to your backend
+          const response = await fetch(`https://asmine-production.up.railway.app/api/woo/products/${productId}/reviews`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-woo-store-url': credentials.storeUrl,
+              'x-woo-consumer-key': credentials.consumerKey,
+              'x-woo-consumer-secret': credentials.consumerSecret
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            console.log(`Batch ${batchNumber} inserted successfully:`, result);
+            successCount += batch.length;
+            
+            // Show progress notification
+            showNotification(`Batch ${batchNumber}/${totalBatches} inserted successfully!`, 'success');
+          } else {
+            // Handle API error response
+            const errorMessage = result.error || `Failed to insert batch ${batchNumber}. Status: ${response.status}`;
+            console.error(`API Error for batch ${batchNumber}:`, errorMessage);
+            errorCount += batch.length;
+            errors.push(`Batch ${batchNumber}: ${errorMessage}`);
+          }
+
+          // Wait 2 seconds before sending the next batch (except for the last batch)
+          if (batchIndex < batches.length - 1) {
+            console.log('Waiting 2 seconds before sending next batch...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+
+        } catch (error) {
+          console.error(`Error inserting batch ${batchNumber}:`, error);
+          errorCount += batch.length;
+          errors.push(`Batch ${batchNumber}: ${error.message}`);
+        }
+      }
+
+      // Show final results
+      if (errorCount === 0) {
+        // All batches succeeded
+        showNotification(`All ${successCount} reviews inserted successfully!`, 'success');
         
         // Close the modal
         const modal = document.getElementById('reviewGeneratorModal');
         if (modal) {
           modal.style.display = 'none';
         }
+      } else if (successCount === 0) {
+        // All batches failed
+        throw new Error(`Failed to insert any reviews. Errors: ${errors.join('; ')}`);
       } else {
-        // Handle API error response
-        const errorMessage = result.error || `Failed to insert reviews. Status: ${response.status}`;
-        console.error('API Error:', errorMessage);
-        throw new Error(errorMessage);
+        // Partial success
+        showNotification(`${successCount} reviews inserted successfully, ${errorCount} failed.`, 'warning');
+        
+        // Show detailed errors in console
+        console.error('Review insertion errors:', errors);
       }
+
     } catch (error) {
       console.error('Error inserting reviews:', error);
       

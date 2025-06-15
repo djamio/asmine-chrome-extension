@@ -1542,4 +1542,326 @@
   .pricing-tab-content {
     padding: 20px;
   }
+}
+
+/* Market Research Button Styles */
+.market-research-btn {
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  background: #8B5CF6 !important;
+  color: white !important;
+}
+
+.market-research-btn:hover {
+  background: #7C3AED !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3) !important;
+}
+
+.market-research-btn:disabled {
+  background: #ccc !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.market-research-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.loading-spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #8B5CF6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Market Research Modal Styles - Specific to avoid conflicts */
+#marketResearchModal {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+}
+
+#marketResearchModal.show {
+  display: block;
+}
+
+.market-research-modal {
+  background-color: white;
+  margin: 5% auto;
+  padding: 0;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.market-research-modal .modal-header {
+  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.market-research-modal .modal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.close-market-research-modal {
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-market-research-modal:hover {
+  opacity: 0.8;
+}
+
+.market-research-modal .modal-content {
+  padding: 0;
+  max-height: calc(80vh - 80px);
+  overflow-y: auto;
+}
+
+/* Market Research Tabs */
+.market-research-tabs {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.market-research-tab-btn {
+  flex: 1;
+  padding: 15px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.market-research-tab-btn:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+.market-research-tab-btn.active {
+  background: white;
+  color: #8B5CF6;
+  border-bottom: 3px solid #8B5CF6;
+}
+
+.market-research-tab-content {
+  display: none;
+  padding: 30px;
+}
+
+.market-research-tab-content.active {
+  display: block;
+}
+
+/* Trending Products Tab */
+.trending-products h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.trending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.trending-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.trending-item h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.product-stats {
+  margin: 15px 0;
+}
+
+.product-stats p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.trending-item a {
+  color: #8B5CF6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.trending-item a:hover {
+  text-decoration: underline;
+}
+
+/* Trend Analysis Tab */
+.trend-analysis-details h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.seasonal-relevance h4,
+.popularity-reason h4,
+.recommendation-text h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.seasonal-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.seasonal-badge.summer {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.seasonal-badge.winter {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.seasonal-badge.year-round {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.popularity-reason p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #666;
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #8B5CF6;
+}
+
+.recommendation-text p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #666;
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #8B5CF6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .market-research-modal {
+    width: 95%;
+    margin: 10% auto;
+  }
+  
+  .market-research-tabs {
+    flex-direction: column;
+  }
+  
+  .market-research-tab-btn {
+    text-align: left;
+  }
+  
+  .trending-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .market-research-modal .modal-content {
+    padding: 20px;
+  }
+  
+  .market-research-tab-content {
+    padding: 20px;
+  }
+}
+
+/* Modal Styles - Generic modal for market research and other modals */
+.modal:not(#pricingModal) {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* Specific styling for market research modal */
+#marketResearchModal {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+}
+
+#marketResearchModal.show {
+  display: block;
 } 

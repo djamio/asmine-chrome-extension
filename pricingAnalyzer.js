@@ -270,6 +270,11 @@ Please ensure the response is valid JSON and includes all required fields.`;
 
   // Function to create pricing analysis modal
   function createPricingModal() {
+    // Check if modal already exists
+    if (document.getElementById('pricingModal')) {
+      return;
+    }
+
     const modalHTML = `
       <div id="pricingModal" class="modal">
         <div class="pricing-modal">

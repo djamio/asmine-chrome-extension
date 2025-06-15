@@ -407,6 +407,7 @@
 
       .button-group .generate-prompt-btn, 
       .button-group .pricing-analysis-btn,
+      .button-group .market-research-btn,
       .button-group .view-in-woo-btn {
         width: 40px !important;
         height: 40px !important;
@@ -520,6 +521,11 @@
                 <button class="pricing-analysis-btn" data-product-id="${p.id}" title="Analyze Product Pricing">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
+                </button>
+                <button class="market-research-btn" data-product-id="${p.id}" title="Market Research Analysis">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-1.94-3.07M9 19v-3.87a3.37 3.37 0 0 1 1.94-3.07M9 19v-6m0 0V9a3 3 0 0 1 3-3h0a3 3 0 0 1 3 3v0m-6 0h6m-6 0H9"/>
                   </svg>
                 </button>
                 <button class="view-in-woo-btn" data-product-id="${p.id}" title="View in WooCommerce">
@@ -1494,6 +1500,18 @@ Please ensure the response is valid JSON and includes all required fields.
           window.PricingAnalyzer.handlePricingAnalysis(btn, products[i]);
         } else {
           console.error('PricingAnalyzer not loaded');
+        }
+      });
+    });
+
+    // Add event listeners for market research buttons
+    const marketResearchButtons = targetResultsDiv.querySelectorAll('.market-research-btn');
+    marketResearchButtons.forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        if (window.MarketResearch && window.MarketResearch.handleMarketResearch) {
+          window.MarketResearch.handleMarketResearch(btn, products[i]);
+        } else {
+          console.error('MarketResearch not loaded');
         }
       });
     });

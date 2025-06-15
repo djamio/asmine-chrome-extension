@@ -90,7 +90,8 @@ Return your answer in the following **JSON format**:
   }
 }
 
-Please ensure the response is valid JSON and includes all required fields.`;
+Please ensure the response is valid JSON and includes all required fields.
+ also make sure to do the research on the country associated to the language of the product`;
 
       // Find ChatGPT's input area and send the prompt
       try {

@@ -40,7 +40,7 @@
 
 I will provide you with a product's title and description. Your task is to:
 
-Search for at least 3 best-selling or trending similar products available now on the market (e.g., Amazon, eBay, Walmart, Shein, etc.).
+Search for at least 3 best-selling or trending  products on the same niche available now on the market (e.g.,  aliexpress, temu, Amazon, eBay, Walmart, Shein, etc.).
 
 Return for each product:
    - Title
@@ -49,6 +49,10 @@ Return for each product:
    - Platform (e.g., Amazon, Walmart, etc.)
    - Number of reviews (if available)
    - Rating (out of 5, if available)
+   - gallery images (if available)
+   - description
+   - specifications
+  
 
 Highlight why these products are considered popular at the moment (e.g., seasonal trend, TikTok virality, influencer use, etc.).
 
@@ -73,23 +77,17 @@ Return your output in the following JSON format:
       "productUrl": "https://example.com/product1",
       "platform": "Amazon",
       "rating": 4.5,
-      "reviews": 1200
-    },
-    {
-      "title": "Another Popular Product",
-      "price": 30.00,
-      "productUrl": "https://example.com/product2",
-      "platform": "Walmart",
-      "rating": 4.7,
-      "reviews": 987
-    },
-    {
-      "title": "Third Trending Product",
-      "price": 28.50,
-      "productUrl": "https://example.com/product3",
-      "platform": "Shein",
-      "rating": 4.3,
-      "reviews": 756
+      "reviews": 1200,
+      "galleryImages": [
+        "https://example.com/image1.jpg",
+        "https://example.com/image2.jpg"
+      ],
+      "description": "Detailed product description with features and benefits...",
+      "specifications": [
+        "Material: High-quality fabric",
+        "Size: One size fits all",
+        "Color: Multiple options available"
+      ]
     }
   ],
   "trendAnalysis": {
@@ -99,7 +97,9 @@ Return your output in the following JSON format:
   }
 }
 
-Please ensure the response is valid JSON and includes all required fields.`;
+Please ensure the response is valid JSON and includes all required fields.
+ also make sure that the product url are valid url and are not redirecting to product not found page
+ also make sure to do the research on the country associated to the language of the product`;
 
       // Find ChatGPT's input area and send the prompt
       try {
@@ -432,6 +432,45 @@ Please ensure the response is valid JSON and includes all required fields.`;
     const trendingList = document.getElementById('market-trending-list');
     if (trendingList && analysisResults.trendingComparisons && Array.isArray(analysisResults.trendingComparisons)) {
       trendingList.innerHTML = analysisResults.trendingComparisons.map((trendingProduct, index) => {
+        // Handle gallery images
+        let galleryHTML = '';
+        if (trendingProduct.galleryImages && Array.isArray(trendingProduct.galleryImages) && trendingProduct.galleryImages.length > 0) {
+          galleryHTML = `
+            <div class="product-gallery">
+              <h5>Gallery Images:</h5>
+              <div class="gallery-grid">
+                ${trendingProduct.galleryImages.map(img => `
+                  <img src="${img}" alt="Product image" class="gallery-image" onerror="this.style.display='none'">
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        // Handle description
+        let descriptionHTML = '';
+        if (trendingProduct.description) {
+          descriptionHTML = `
+            <div class="product-description">
+              <h5>Description:</h5>
+              <p>${trendingProduct.description}</p>
+            </div>
+          `;
+        }
+
+        // Handle specifications
+        let specificationsHTML = '';
+        if (trendingProduct.specifications && Array.isArray(trendingProduct.specifications) && trendingProduct.specifications.length > 0) {
+          specificationsHTML = `
+            <div class="product-specifications">
+              <h5>Specifications:</h5>
+              <ul>
+                ${trendingProduct.specifications.map(spec => `<li>${spec}</li>`).join('')}
+              </ul>
+            </div>
+          `;
+        }
+
         return `
           <div class="trending-item">
             <h4>${trendingProduct.title || 'No title'}</h4>
@@ -440,6 +479,9 @@ Please ensure the response is valid JSON and includes all required fields.`;
               <p><strong>Platform:</strong> ${trendingProduct.platform || 'N/A'}</p>
               <p><strong>Rating:</strong> ${trendingProduct.rating || 'N/A'}/5 (${trendingProduct.reviews || 'N/A'} reviews)</p>
             </div>
+            ${galleryHTML}
+            ${descriptionHTML}
+            ${specificationsHTML}
             <p><strong>URL:</strong> <a href="${trendingProduct.productUrl || '#'}" target="_blank" rel="noopener noreferrer">View Product</a></p>
           </div>
         `;
@@ -561,7 +603,36 @@ Please ensure the response is valid JSON and includes all required fields.`;
       
       if (currentTitleElement) currentTitleElement.textContent = 'Test Product';
       if (currentAnalysisElement) currentAnalysisElement.textContent = 'This is a test of the market research modal display.';
-      if (trendingList) trendingList.innerHTML = '<div class="trending-item"><h4>Test Trending Product</h4><p>This is a test trending product.</p></div>';
+      if (trendingList) trendingList.innerHTML = `
+        <div class="trending-item">
+          <h4>Test Trending Product</h4>
+          <div class="product-stats">
+            <p><strong>Price:</strong> $29.99</p>
+            <p><strong>Platform:</strong> Amazon</p>
+            <p><strong>Rating:</strong> 4.5/5 (150 reviews)</p>
+          </div>
+          <div class="product-gallery">
+            <h5>Gallery Images:</h5>
+            <div class="gallery-grid">
+              <img src="https://via.placeholder.com/80x80/8B5CF6/FFFFFF?text=IMG1" alt="Product image" class="gallery-image">
+              <img src="https://via.placeholder.com/80x80/8B5CF6/FFFFFF?text=IMG2" alt="Product image" class="gallery-image">
+            </div>
+          </div>
+          <div class="product-description">
+            <h5>Description:</h5>
+            <p>This is a test product description with detailed information about the product features and benefits.</p>
+          </div>
+          <div class="product-specifications">
+            <h5>Specifications:</h5>
+            <ul>
+              <li>Material: High-quality fabric</li>
+              <li>Size: One size fits all</li>
+              <li>Color: Multiple options available</li>
+            </ul>
+          </div>
+          <p><strong>URL:</strong> <a href="#" target="_blank" rel="noopener noreferrer">View Product</a></p>
+        </div>
+      `;
       if (seasonalBadge) {
         seasonalBadge.textContent = 'year-round';
         seasonalBadge.className = 'seasonal-badge year-round';

@@ -1864,4 +1864,91 @@
 
 #marketResearchModal.show {
   display: block;
+}
+
+/* Market Research Product Gallery */
+.product-gallery {
+  margin: 15px 0;
+}
+
+.product-gallery h5 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.gallery-image {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s;
+}
+
+.gallery-image:hover {
+  transform: scale(1.05);
+}
+
+/* Market Research Product Description */
+.product-description {
+  margin: 15px 0;
+}
+
+.product-description h5 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.product-description p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #666;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 3px solid #8B5CF6;
+}
+
+/* Market Research Product Specifications */
+.product-specifications {
+  margin: 15px 0;
+}
+
+.product-specifications h5 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.product-specifications ul {
+  margin: 0;
+  padding-left: 20px;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 3px solid #8B5CF6;
+}
+
+.product-specifications li {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.product-specifications li:last-child {
+  margin-bottom: 0;
 } 

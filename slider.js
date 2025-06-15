@@ -477,17 +477,11 @@
                 `).join('')}
               </div>
               <div class="button-group">
-                <button class="generate-prompt-btn">
+                <button class="generate-prompt-btn" data-product-id="${p.id}" title="Generate ChatGPT Audit">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                   </svg>
                   Generate Audit
-                </button>
-                <button class="compare-btn" data-product-id="${p.id}" disabled>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M4 4l5 5"/>
-                  </svg>
-                  Compare
                 </button>
                 <button class="view-in-woo-btn" data-product-id="${p.id}" title="View in WooCommerce">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -526,7 +520,6 @@
 
     // Attach event listeners
     attachGeneratePromptListeners(products, isBulkOperationsActive);
-    attachCompareButtonListeners(products, isBulkOperationsActive);
     if (totalPages > 1) {
       attachPaginationListeners(totalPages);
     }
@@ -781,110 +774,120 @@
   // Function to handle ChatGPT prompt generation and response
   async function handleGeneratePrompt(btn, product) {
     try {
-      // Disable both buttons and show loading state
-        btn.disabled = true;
-        btn.textContent = 'Generating...';
-    const productCard = btn.closest('.product-card');
-    const compareBtn = productCard.querySelector('.compare-btn');
-      if (compareBtn) {
-    compareBtn.disabled = true;
-        compareBtn.classList.add('loading');
-      }
+      // Disable button and show loading state with spinner
+      btn.disabled = true;
+      btn.innerHTML = `
+        <div class="loading-spinner-small"></div>
+        Generating Audit...
+      `;
 
-        const prompt = `
+      // Store the request start time to track when this request was initiated
+      const requestStartTime = Date.now();
+      console.log('Starting new audit request at:', requestStartTime);
+
+      const prompt = `
 Audit the following WooCommerce product and provide a comprehensive analysis:
 
 Product Details:
 - Title: ${product.title}
 - Short Description: ${product.shortDescription || product.description?.substring(0, 150) + '...'}
-        - Full Description: ${product.description && product.description.length ? product.description.slice(0, 300) : 'No description available'}
+- Full Description: ${product.description && product.description.length ? product.description.slice(0, 300) : 'No description available'}
 - Specifications: ${JSON.stringify(product.specifications || [])}
 - Categories: ${JSON.stringify(product.categories || [])}
 - Tags: ${JSON.stringify(product.tags || [])}
 - Reviews Count: ${product.reviews_count || 0}
 
-         make sure you return the response in the same language as the product.
-        generate 5 reviews, and no nested categories or tags. for description please generate an advanced html content 
-        Please analyze all aspects and return a JSON response with the following structure:
+Please provide a comprehensive audit in the following JSON format:
+
 {
-  "titleScore": number (0-100),
-  "titleAnalysis": string,
-  "newTitle": string,
-  "shortDescriptionScore": number (0-100),
-  "shortDescriptionAnalysis": string,
-  "newShortDescription": string,
-  "descriptionScore": number (0-100),
-  "descriptionAnalysis": string,
-  "newDescription": string,
-  "specificationsScore": number (0-100),
-  "specificationsAnalysis": string,
-  "suggestedSpecs": string[],
-  "categoriesScore": number (0-100),
-  "categoriesAnalysis": string,
-  "suggestedCategories": string[],
-  "tagsScore": number (0-100),
-  "tagsAnalysis": string,
-  "suggestedTags": string[],
+  "globalScore": 85,
+  "overallAnalysis": "Overall analysis of the product...",
+  "priorityImprovements": [
+    "Improvement 1",
+    "Improvement 2",
+    "Improvement 3"
+  ],
+  "titleScore": 80,
+  "titleAnalysis": "Analysis of the product title...",
+  "newTitle": "Enhanced product title",
+  "shortDescriptionScore": 75,
+  "shortDescriptionAnalysis": "Analysis of the short description...",
+  "newShortDescription": "Enhanced short description",
+  "descriptionScore": 85,
+  "descriptionAnalysis": "Analysis of the full description...",
+  "newDescription": "Enhanced full description",
+  "specificationsScore": 70,
+  "specificationsAnalysis": "Analysis of specifications...",
+  "suggestedSpecs": [
+    {"name": "Spec Name", "options": ["Option 1", "Option 2"]}
+  ],
+  "categoriesScore": 80,
+  "categoriesAnalysis": "Analysis of categories...",
+  "suggestedCategories": ["Category 1", "Category 2"],
+  "tagsScore": 75,
+  "tagsAnalysis": "Analysis of tags...",
+  "suggestedTags": ["Tag 1", "Tag 2"],
+  "reviewsScore": 85,
+  "reviewsAnalysis": "Analysis of reviews...",
   "suggestedReviews": [
     {
-      "review": string,
-      "rating": number (1-5),
-      "date": string (ISO format: YYYY-MM-DD),
-      "author": string
+      "review": "Suggested review content",
+      "reviewer": "Reviewer Name",
+      "rating": 5,
+      "date": "2024-01-01"
     }
-  ],
-  "reviewsScore": number (0-100),
-          "reviewsAnalysis": string,
-          "globalScore": number (0-100),
-          "overallAnalysis": string,
-          "priorityImprovements": string[]
-        } Please analyze all aspects and return a JSON response with the defined structure:`;
+  ]
+}
 
-    try {
-      // Find the contenteditable div (ChatGPT's input box)
-      const inputBox = document.querySelector('[contenteditable="true"]');
-      if (inputBox) {
-        // Focus the input box
-        inputBox.focus();
+Please ensure the response is valid JSON and includes all required fields.
+`;
 
-        // Insert the prompt using execCommand
-        document.execCommand("insertText", false, prompt);
+      // Find ChatGPT's input area and send the prompt
+      try {
+        // Find the contenteditable div (ChatGPT's input box)
+        const inputBox = document.querySelector('[contenteditable="true"]');
+        if (inputBox) {
+          // Focus the input box
+          inputBox.focus();
 
-        // Find and click the send button after a short delay
-        setTimeout(() => {
+          // Insert the prompt using execCommand
+          document.execCommand("insertText", false, prompt);
+
+          // Find and click the send button after a short delay
+          setTimeout(() => {
+            const sendButton = document.querySelector('[data-testid="send-button"]');
+            if (sendButton) {
+              sendButton.click();
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error inserting prompt:', error);
+        // Fallback: try the textarea approach
+        const textarea = document.querySelector('#prompt-textarea');
+        if (textarea) {
+          textarea.value = prompt;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea.focus();
           const sendButton = document.querySelector('[data-testid="send-button"]');
           if (sendButton) {
             sendButton.click();
           }
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Error inserting prompt:', error);
-      // Fallback: try the textarea approach
-      const textarea = document.querySelector('#prompt-textarea');
-      if (textarea) {
-        textarea.value = prompt;
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        textarea.focus();
-        const sendButton = document.querySelector('[data-testid="send-button"]');
-        if (sendButton) {
-          sendButton.click();
         }
       }
-    }
 
-    // Listen for ChatGPT response
-    let debounceTimer;
-    const observer = new MutationObserver((mutations) => {
-      console.log('MutationObserver triggered, mutations:', mutations.length);
-      
-      // Clear any existing timer
-      clearTimeout(debounceTimer);
-      
-      // Set a new timer to process the latest state
-      debounceTimer = setTimeout(() => {
-        console.log('Processing final state after mutations');
+      // Monitor ChatGPT's response
+      let debounceTimer;
+      const observer = new MutationObserver((mutations) => {
+        console.log('MutationObserver triggered, mutations:', mutations.length);
         
+        // Clear any existing timer
+        clearTimeout(debounceTimer);
+        
+        // Set a new timer to process the latest state
+        debounceTimer = setTimeout(() => {
+          console.log('Processing final state after mutations');
+          
           // Use the new extractLastJSONFromChatGPT function with validator
           const parsed = extractLastJSONFromChatGPT((json) => {
             return json && json.titleScore !== undefined && json.globalScore !== undefined;
@@ -892,117 +895,138 @@ Product Details:
           
           if (parsed) {
             console.log('Found valid audit results JSON:', parsed);
+            
+            // Check if this result is from our current request by checking the timestamp
+            const currentTime = Date.now();
+            const timeSinceRequest = currentTime - requestStartTime;
+            
+            // Only process results that came after our request started (with a small buffer)
+            if (timeSinceRequest > 2000) { // At least 2 seconds after request started
+              console.log('Processing results from current request (time since request:', timeSinceRequest, 'ms)');
                     
-                    // Store the audit results and product data
-                    const auditData = {
-                      audit: parsed,
-                      product: product,
-                      timestamp: Date.now()
-                    };
-                    localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
+              // Store the audit results and product data
+              const auditData = {
+                audit: parsed,
+                product: product,
+                timestamp: Date.now()
+              };
+              localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
 
-                    // Enable and attach event listener to compare button
-                    compareBtn.disabled = false;
-            compareBtn.classList.remove('loading');
-                    compareBtn.addEventListener('click', async () => {
-                      // Create modal if it doesn't exist
-                      if (!document.getElementById('auditModal')) {
-                        createAuditModal();
-                      }
-                      
-                      // Get modal after ensuring it exists
-                      const modal = document.getElementById('auditModal');
-                      if (!modal) {
-                        console.error('Failed to create or find audit modal');
-                        return;
-                      }
+              // Automatically show the audit modal
+              try {
+                // Create modal if it doesn't exist
+                if (!document.getElementById('auditModal')) {
+                  createAuditModal();
+                }
+                
+                // Get modal after ensuring it exists
+                const modal = document.getElementById('auditModal');
+                if (!modal) {
+                  console.error('Failed to create or find audit modal');
+                  return;
+                }
 
-                      // Show modal
-                      const modalContent = modal.querySelector('.audit-modal');
-                      if (modalContent) {
-                        modalContent.style.display = 'block';
-                      }
+                // Show modal
+                const modalContent = modal.querySelector('.audit-modal');
+                if (modalContent) {
+                  modalContent.style.display = 'block';
+                }
 
-                      // Update modal content with fresh audit results
-                      updateModalContent(modal, product, parsed);
-                    });
+                // Update modal content with fresh audit results
+                updateModalContent(modal, product, parsed);
+                
+                console.log('Audit modal automatically displayed');
+              } catch (modalError) {
+                console.error('Error showing audit modal:', modalError);
+              }
 
-                    // Display the results summary
-                    const resultsDiv = productCard.querySelector('.audit-results');
-                    if (resultsDiv) {
-                      console.log('Displaying results summary');
-                      resultsDiv.innerHTML = `
-                    <div class="audit-summary">
-                      <h4>Audit Results</h4>
-                          <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
-                          <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
-                          <div class="priority-improvements">
-                      <h5>Priority Improvements:</h5>
-                      <ul>
-                              ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
-                      </ul>
-                          </div>
+              // Display the results summary
+              const productCard = btn.closest('.product-card');
+              const resultsDiv = productCard.querySelector('.audit-results');
+              if (resultsDiv) {
+                console.log('Displaying results summary');
+                resultsDiv.innerHTML = `
+              <div class="audit-summary">
+                <h4>Audit Results</h4>
+                    <p><strong>Global Score:</strong> ${parsed.globalScore}/100</p>
+                    <p><strong>Analysis:</strong> ${parsed.overallAnalysis}</p>
+                    <div class="priority-improvements">
+                <h5>Priority Improvements:</h5>
+                <ul>
+                        ${parsed.priorityImprovements.map(imp => `<li>${imp}</li>`).join('')}
+                </ul>
                     </div>
-                  `;
-                    }
+              </div>
+            `;
+              }
 
-            // Reset generate button state
-            btn.disabled = false;
-            // btn.textContent = 'Generate ChatGPT Prompt';
+              // Reset generate button state
+              btn.disabled = false;
+              btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                Generate Audit
+              `;
 
-            // Disconnect the observer since we've found and processed the response
-            observer.disconnect();
-                  } else {
+              // Disconnect the observer since we've found and processed the response
+              observer.disconnect();
+            } else {
+              console.log('Ignoring results from previous request (time since request:', timeSinceRequest, 'ms)');
+            }
+          } else {
             console.log('No valid audit JSON found yet, continuing to wait...');
-        }
-      }, 1000); // Wait 1 second after last mutation before processing
-    });
-
-    // Start observing ChatGPT's response area
-    console.log('Setting up observer');
-    const possibleTargets = [
-      '.chat-content',
-      '[data-testid="conversation-main"]',
-      'main'
-    ];
-
-    let targetNode = null;
-    for (const selector of possibleTargets) {
-      const element = document.querySelector(selector);
-      if (element) {
-        console.log('Found target node with selector:', selector);
-        targetNode = element;
-        break;
-      }
-    }
-
-    if (targetNode) {
-      console.log('Starting observation of target node');
-      observer.observe(targetNode, { 
-        childList: true,
-        subtree: true,
-        characterData: true,
-        characterDataOldValue: true
+          }
+        }, 1000); // Wait 1 second after last mutation before processing
       });
-    } else {
-      console.error('Could not find any suitable target node for observation');
+
+      // Start observing ChatGPT's response area
+      console.log('Setting up observer');
+      const possibleTargets = [
+        '.chat-content',
+        '[data-testid="conversation-main"]',
+        'main'
+      ];
+
+      let targetNode = null;
+      for (const selector of possibleTargets) {
+        const element = document.querySelector(selector);
+        if (element) {
+          console.log('Found target node with selector:', selector);
+          targetNode = element;
+          break;
+        }
+      }
+
+      if (targetNode) {
+        console.log('Starting observation of target node');
+        observer.observe(targetNode, { 
+          childList: true,
+          subtree: true,
+          characterData: true,
+          characterDataOldValue: true
+        });
+      } else {
+        console.error('Could not find any suitable target node for observation');
         // Reset button states if we couldn't find the target node
         btn.disabled = false;
-        btn.textContent = 'Generate ChatGPT Prompt';
-        if (compareBtn) {
-          compareBtn.disabled = false;
-          compareBtn.classList.remove('loading');
-        }
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          Generate Audit
+        `;
       }
 
     } catch (error) {
       console.error('Error in handleGeneratePrompt:', error);
-                btn.disabled = false;
-                btn.textContent = 'Generate ChatGPT Prompt';
-      if (compareBtn) {
-        compareBtn.disabled = false;
-        compareBtn.classList.remove('loading');
-      }
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        Generate Audit
+      `;
     }
   }
 
@@ -1400,40 +1424,8 @@ Product Details:
     });
   }
 
-  // Function to attach compare button listeners
-  function attachCompareButtonListeners(products, isBulkOperationsActive = false) {
-    const targetResultsDiv = isBulkOperationsActive ? 
-      document.getElementById('auditResultsBulk') : 
-      document.getElementById('auditResults');
-    
-    if (!targetResultsDiv) return;
-    
-    const compareButtons = targetResultsDiv.querySelectorAll('.compare-btn');
-    compareButtons.forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const productId = btn.dataset.productId;
-        const modal = document.getElementById('auditModal');
-        if (!modal) {
-          createAuditModal();
-        }
-
-        const product = products.find(p => p.id === productId);
-        if (!product) return;
-
-        const storedData = JSON.parse(localStorage.getItem(`audit_${product.id}`));
-        if (!storedData) {
-          alert('No audit results available for comparison. Please generate an audit first.');
-          return;
-        }
-
-        // Show modal
-        modal.querySelector('.audit-modal').style.display = 'block';
-
-        // Update modal content
-        updateModalContent(modal, product, storedData.audit);
-      });
-    });
-  }
+  // Function to attach compare button listeners - REMOVED (no longer needed)
+  // Compare button functionality has been removed as the modal now shows automatically
 
   // Function to attach generate prompt button listeners
   function attachGeneratePromptListeners(products, isBulkOperationsActive = false) {
@@ -2199,95 +2191,6 @@ Product Details:
   // Initial check of connection status
   const auth = JSON.parse(localStorage.getItem('wooAuth'));
   updateConnectionUI(auth?.wooAuth?.isConnected || false);
-
-  // Add click handler for compare button
-  document.addEventListener('click', async function(e) {
-    if (e.target.classList.contains('compare-btn')) {
-      const button = e.target;
-      const productId = button.getAttribute('data-product-id');
-      
-      // Show loading state
-      button.classList.add('loading');
-      button.disabled = true;
-      
-      try {
-        // Find the product in our products array
-        const product = currentProducts.find(p => p.id === productId);
-        if (!product) {
-          throw new Error('Product not found');
-        }
-
-        // Get the most recent audit results
-        const auditResults = product.auditResults;
-        if (!auditResults || !auditResults.length) {
-          throw new Error('No audit results available for this product');
-        }
-
-        // Get the most recent result (last in the array)
-        const latestResult = auditResults[auditResults.length - 1];
-
-        // Create or get modal
-        let modal = document.getElementById('comparisonModal');
-        if (!modal) {
-          modal = document.createElement('div');
-          modal.id = 'comparisonModal';
-          modal.className = 'modal';
-          document.body.appendChild(modal);
-        }
-
-        // Update modal content with the latest results
-        modal.innerHTML = `
-          <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>${product.name} - Audit Results</h2>
-            <div class="audit-details">
-              <h3>${latestResult.title}</h3>
-              <p>${latestResult.description}</p>
-              <div class="reviews-scores">
-                <h4>Reviews Analysis</h4>
-                <div class="score-item">
-                  <span>Positive Reviews:</span>
-                  <span class="score positive">${latestResult.reviews_scores.positive_reviews}%</span>
-                </div>
-                <div class="score-item">
-                  <span>Negative Reviews:</span>
-                  <span class="score negative">${latestResult.reviews_scores.negative_reviews}%</span>
-                </div>
-                <div class="score-item">
-                  <span>Neutral Reviews:</span>
-                  <span class="score neutral">${latestResult.reviews_scores.neutral_reviews}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-
-        // Show modal
-        modal.style.display = 'block';
-
-        // Add close button functionality
-        const closeBtn = modal.querySelector('.close');
-        closeBtn.onclick = function() {
-          modal.style.display = 'none';
-        };
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-          if (event.target === modal) {
-            modal.style.display = 'none';
-          }
-        };
-
-      } catch (error) {
-        console.error('Error showing comparison:', error);
-        alert(error.message || 'Failed to show comparison. Please try again.');
-      } finally {
-        // Remove loading state
-        button.classList.remove('loading');
-        button.disabled = false;
-      }
-    }
-  });
 
   // Initialize collapsible section
   function initializeCollapsibleSection() {

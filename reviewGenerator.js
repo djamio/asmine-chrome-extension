@@ -57,7 +57,8 @@ Return the response in the following format:
 ]
 
 Please ensure the response is valid JSON and includes exactly 5 reviews with all required fields. make sure you use the same lanuguage 
-as the product description and title`;
+as the product title
+return only the json and nothing else`;
 
       // Find ChatGPT's input area and send the prompt
       try {

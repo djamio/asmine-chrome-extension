@@ -39,7 +39,7 @@ Given the following product information:
 - Description: ${product.description || product.short_description || 'No description available'}
 - Specifications: ${JSON.stringify(product.specifications || [])}
 
-Generate 20 realistic product reviews as JSON. Each review should include:
+Generate 5 realistic product reviews as JSON. Each review should include:
 - reviewerName: A realistic-sounding name
 - review: A short, natural-sounding review text (2–4 sentences) relevant to the product
 - rating: Integer from 1 to 5
@@ -56,7 +56,7 @@ Return the response in the following format:
   }
 ]
 
-Please ensure the response is valid JSON and includes exactly 20 reviews with all required fields. make sure you use the same lanuguage 
+Please ensure the response is valid JSON and includes exactly 5 reviews with all required fields. make sure you use the same lanuguage 
 as the product description and title`;
 
       // Find ChatGPT's input area and send the prompt
@@ -108,7 +108,7 @@ as the product description and title`;
           // Use the extractLastJSONFromChatGPT function with validator
           const parsed = extractLastJSONFromChatGPT((json) => {
             // Check if this is a valid review generation response
-            const isValidStructure = Array.isArray(json) && json.length === 20;
+            const isValidStructure = Array.isArray(json) && json.length === 5;
             const hasValidReviews = json.every(review => 
               review.reviewerName && 
               review.review && 

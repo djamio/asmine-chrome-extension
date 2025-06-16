@@ -815,43 +815,103 @@
     }
   }
 
+    // Function to wait for ChatGPT to finish typing before extracting JSON
+  async function waitForLatestAssistantMessage(timeout = 12000) {
+    const pollInterval = 300;
+    const maxAttempts = Math.ceil(timeout / pollInterval);
+    let previousContent = '';
+    let stableContentCount = 0;
+    const requiredStableChecks = 3; // Content must be stable for 3 checks (900ms)
+
+    for (let i = 0; i < maxAttempts; i++) {
+      const messages = document.querySelectorAll('[data-message-author-role="assistant"]');
+      const lastMessage = messages[messages.length - 1];
+
+      if (!lastMessage) {
+        console.log(`⏳ No assistant message found yet... (attempt ${i + 1}/${maxAttempts})`);
+        await new Promise(r => setTimeout(r, pollInterval));
+        continue;
+      }
+
+      // Get the current content of the last message
+      const currentContent = lastMessage.textContent.trim();
+      
+      // Check if content has stopped changing (indicating ChatGPT finished typing)
+      if (currentContent === previousContent && currentContent.length > 0) {
+        stableContentCount++;
+        console.log(`📝 Content stable for ${stableContentCount}/${requiredStableChecks} checks`);
+        
+        // If content has been stable and contains a code block, we're ready
+        if (stableContentCount >= requiredStableChecks && lastMessage.querySelector('pre code')) {
+          console.log("✅ ChatGPT finished typing - content stable with code block");
+          return true;
+        }
+      } else {
+        // Content changed, reset stability counter
+        if (currentContent !== previousContent) {
+          stableContentCount = 0;
+          console.log(`🔄 Content changed, resetting stability counter (length: ${currentContent.length})`);
+        }
+      }
+
+      previousContent = currentContent;
+      
+      console.log(`⏳ Waiting for ChatGPT to finish typing... (attempt ${i + 1}/${maxAttempts})`);
+      await new Promise(r => setTimeout(r, pollInterval));
+    }
+
+    console.warn("⚠️ Timeout waiting for ChatGPT to finish typing.");
+    return false;
+  }
+
   // Function to extract JSON from ChatGPT's last response
   function extractLastJSONFromChatGPT(validator = null) {
-    // Get all messages from the conversation
     const messages = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
 
-    // Start from the last assistant message and look for a JSON code block
+    // Start from the last assistant message and work backwards
     for (let i = messages.length - 1; i >= 0; i--) {
       const codeBlocks = messages[i].querySelectorAll('pre code');
-
-      for (const code of codeBlocks) {
+      
+      // Start from the last code block in each message and work backwards
+      for (let j = codeBlocks.length - 1; j >= 0; j--) {
+        const code = codeBlocks[j];
         try {
-          // Attempt to parse the content as JSON
           const text = code.textContent.trim();
+          console.log(`🔍 Checking code block ${j + 1}/${codeBlocks.length} in message ${i + 1}:`, text.substring(0, 100) + "...");
 
-          // Use regex to isolate the JSON if extra characters exist before/after
-          const match = text.match(/{[\s\S]*}/);
+          // Enhanced regex patterns to handle different JSON formats
+          const match = text.match(/```json\s*([\s\S]*?)```/) || // JSON in markdown code block
+                       text.match(/```\s*({\s*[\s\S]*?})\s*```/) || // JSON in generic code block  
+                       text.match(/{[\s\S]*}/); // Raw JSON
+
           if (match) {
-            const json = JSON.parse(match[0]);
-            console.log("Extracted JSON:", json);
+            // Extract the JSON string, preferring the captured group if available
+            const jsonString = match[1] ? match[1].trim() : match[0].trim();
+            console.log("📄 Attempting to parse JSON string:", jsonString.substring(0, 150) + "...");
+            
+            const json = JSON.parse(jsonString);
+            console.log("✅ Successfully extracted JSON:", json);
             
             // If a validator function is provided, use it to check the JSON structure
             if (validator && typeof validator === 'function') {
               if (validator(json)) {
+                console.log("✅ JSON passed validator");
                 return json;
+              } else {
+                console.log("❌ JSON failed validator, continuing search...");
               }
             } else {
               return json; // Return any valid JSON if no validator
             }
           }
         } catch (e) {
-          // Not valid JSON, continue
+          console.log("❌ Failed to parse JSON from code block:", e.message);
           continue;
         }
       }
     }
 
-    console.warn("No valid JSON found in the assistant messages.");
+    console.warn("❌ No valid JSON found in any assistant messages.");
     return null;
   }
 
@@ -967,12 +1027,40 @@ Please ensure the response is valid JSON and includes all required fields.
         clearTimeout(debounceTimer);
         
         // Set a new timer to process the latest state
-        debounceTimer = setTimeout(() => {
+        debounceTimer = setTimeout(async () => {
           console.log('Processing final state after mutations');
           
-          // Use the new extractLastJSONFromChatGPT function with validator
+          // Wait for ChatGPT to finish typing before extracting JSON
+          const isReady = await waitForLatestAssistantMessage();
+          if (!isReady) {
+            console.log('⚠️ ChatGPT response not ready yet, will try again on next mutation');
+            return;
+          }
+          
+          // Use the enhanced extractLastJSONFromChatGPT function with comprehensive validator
           const parsed = extractLastJSONFromChatGPT((json) => {
-            return json && json.titleScore !== undefined && json.globalScore !== undefined;
+            // Check if this is a complete audit response
+            const hasBasicStructure = json && 
+              json.titleScore !== undefined && 
+              json.globalScore !== undefined &&
+              json.overallAnalysis !== undefined &&
+              json.priorityImprovements !== undefined;
+            
+            // Check if it has most of the expected audit fields (indicates complete response)
+            const hasDetailedFields = json.titleAnalysis !== undefined &&
+              json.newTitle !== undefined &&
+              json.shortDescriptionScore !== undefined &&
+              json.descriptionScore !== undefined;
+            
+            console.log('🔍 Validating audit JSON completeness:', {
+              hasBasicStructure,
+              hasDetailedFields,
+              fieldsPresent: Object.keys(json || {}).length,
+              expectedMinimumFields: 4
+            });
+            
+            // Require both basic structure and some detailed fields to ensure completeness
+            return hasBasicStructure && hasDetailedFields;
           });
           
           if (parsed) {
@@ -1058,7 +1146,7 @@ Please ensure the response is valid JSON and includes all required fields.
           } else {
             console.log('No valid audit JSON found yet, continuing to wait...');
           }
-        }, 1000); // Wait 1 second after last mutation before processing
+        }, 2000); // Wait 2 seconds after last mutation before processing
       });
 
       // Start observing ChatGPT's response area

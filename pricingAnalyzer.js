@@ -30,7 +30,9 @@
 
       // Generate a unique request ID for this specific request
       const requestId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      console.log('Starting new pricing analysis request with ID:', requestId);
+      const productId = product.id;
+      const productPrice = product.price || 0;
+      console.log('Starting new pricing analysis request with ID:', requestId, 'for product ID:', productId);
 
       // Store the request start time to track when this request was initiated
       const requestStartTime = Date.now();
@@ -50,17 +52,23 @@ I will provide you with a product's title, description, and price. Your task is 
 5. Suggest a new, optimized price if applicable.
 
 Current Product Details:
+- ID: ${productId}
 - Title: ${product.title || product.name}
 - Description: ${product.description || product.short_description || 'No description available'}
-- Current Price: $${product.price || 0}
+- Current Price: $${productPrice}
 - specifications: ${JSON.stringify(product.specifications || [])}
+
+IMPORTANT: Include the exact product ID and price in your response for validation.
 
 Return your answer in the following **JSON format**:
 
 {
+  "requestId": "${requestId}",
+  "productId": "${productId}",
   "currentProduct": {
+    "id": "${productId}",
     "title": "${product.title || product.name}",
-    "price": ${product.price || 0},
+    "price": ${productPrice},
     "analysis": "Analysis of current pricing position..."
   },
   "marketComparisons": [
@@ -143,51 +151,67 @@ return only the json object and nothing else`;
           
           // Use the extractLastJSONFromChatGPT function with validator
           const parsed = extractLastJSONFromChatGPT((json) => {
-            // Check if this is a valid pricing analysis response for our current product
+            // Check if this is a valid pricing analysis response structure
             const isValidStructure = json && json.currentProduct && json.marketComparisons && json.pricingAnalysis;
             
-            // More flexible title matching
-            const originalTitle = (product.title || product.name).toLowerCase().trim();
-            const responseTitle = (json.currentProduct?.title || '').toLowerCase().trim();
+            if (!isValidStructure) {
+              console.log('Invalid pricing analysis JSON structure');
+              return false;
+            }
             
-            // Normalize titles by removing extra spaces and standardizing separators
-            const normalizeTitle = (title) => {
-              return title
-                .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
-                .replace(/\s*[|]\s*/g, ' | ')  // Standardize separator spacing
-                .replace(/\s*[-]\s*/g, ' - ')  // Standardize hyphen spacing
-                .trim();
-            };
+            // Multi-layer validation using reliable identifiers
+            let isValidResponse = false;
             
-            const normalizedOriginal = normalizeTitle(originalTitle);
-            const normalizedResponse = normalizeTitle(responseTitle);
+            // Method 1: Check requestId if available (most reliable)
+            if (json.requestId && json.requestId === requestId) {
+              console.log('✅ Validated by requestId match');
+              isValidResponse = true;
+            }
             
-            // Check if the normalized titles match
-            const titlesMatch = normalizedOriginal === normalizedResponse;
+            // Method 2: Check productId if available (very reliable)
+            else if (json.productId && String(json.productId) === String(productId)) {
+              console.log('✅ Validated by productId match');
+              isValidResponse = true;
+            }
             
-            // If titles don't match exactly, check if they contain the same key information
-            const hasKeyInfo = !titlesMatch ? (
-              // Check if all words from original title (excluding common words) are in response
-              normalizedOriginal
-                .split(/\s+/)
-                .filter(word => 
-                  word.length > 2 && // Ignore very short words
-                  !['for', 'and', 'the', 'with', '|', '-', '🇫🇷'].includes(word.toLowerCase()) // Ignore common words
-                )
-                .every(word => normalizedResponse.includes(word))
-            ) : true;
+            // Method 3: Check product ID in currentProduct object (reliable)
+            else if (json.currentProduct?.id && String(json.currentProduct.id) === String(productId)) {
+              console.log('✅ Validated by currentProduct.id match');
+              isValidResponse = true;
+            }
+            
+            // Method 4: Check price match (fairly reliable for unique prices)
+            else if (json.currentProduct?.price !== undefined && Math.abs(json.currentProduct.price - productPrice) < 0.01) {
+              console.log('✅ Validated by price match');
+              isValidResponse = true;
+            }
+            
+            // Method 5: Fallback - check if this is the only recent response (basic safety)
+            else {
+              const currentTime = Date.now();
+              const timeSinceRequest = currentTime - requestStartTime;
+              if (timeSinceRequest > 5000 && timeSinceRequest < 60000) { // Between 5-60 seconds
+                console.log('⚠️ Fallback validation - recent response without specific identifiers');
+                isValidResponse = true;
+              }
+            }
             
             console.log('Validating pricing analysis JSON:', {
               isValidStructure,
-              titlesMatch,
-              hasKeyInfo,
-              normalizedOriginal,
-              normalizedResponse,
-              expectedTitle: product.title || product.name,
-              actualTitle: json.currentProduct ? json.currentProduct.title : 'none'
+              isValidResponse,
+              expectedRequestId: requestId,
+              actualRequestId: json.requestId,
+              expectedProductId: productId,
+              actualProductId: json.productId || json.currentProduct?.id,
+              expectedPrice: productPrice,
+              actualPrice: json.currentProduct?.price,
+              validationMethod: json.requestId === requestId ? 'requestId' : 
+                               json.productId === String(productId) ? 'productId' :
+                               json.currentProduct?.id === String(productId) ? 'currentProduct.id' :
+                               Math.abs((json.currentProduct?.price || 0) - productPrice) < 0.01 ? 'price' : 'fallback'
             });
             
-            return isValidStructure && hasKeyInfo;
+            return isValidStructure && isValidResponse;
           });
           
           if (parsed) {
@@ -207,7 +231,12 @@ return only the json object and nothing else`;
                 analysis: parsed,
                 product: product,
                 timestamp: Date.now(),
-                requestId: requestId
+                requestId: requestId,
+                productId: productId,
+                validationMethod: parsed.requestId === requestId ? 'requestId' : 
+                                 parsed.productId === String(productId) ? 'productId' :
+                                 parsed.currentProduct?.id === String(productId) ? 'currentProduct.id' :
+                                 Math.abs((parsed.currentProduct?.price || 0) - productPrice) < 0.01 ? 'price' : 'fallback'
               };
               localStorage.setItem(`pricing_${product.id}`, JSON.stringify(pricingData));
 

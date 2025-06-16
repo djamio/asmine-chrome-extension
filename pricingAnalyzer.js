@@ -420,21 +420,28 @@ return only the json object and nothing else`;
 
     tabBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        console.log('Switching to tab:', btn.getAttribute('data-tab'));
-        // Remove active class from all tabs
+        const tabName = btn.getAttribute('data-tab');
+        console.log('[Tab Switch] Clicked tab:', tabName);
+        // Remove active class from all tabs and hide them
         tabBtns.forEach(b => b.classList.remove('active'));
         modal.querySelectorAll('.pricing-tab-content').forEach(content => {
-          console.log('Removing active class from tab content:', content.id);
+          console.log('[Tab Switch] Removing active from:', content.id);
           content.classList.remove('active');
+          content.style.display = 'none'; // Force hide
         });
-        
-        // Add active class to clicked tab
+        // Add active class to clicked tab and show it
         btn.classList.add('active');
-        const tabId = 'tab-' + btn.getAttribute('data-tab');
+        const tabId = 'tab-' + tabName;
         const tabContent = document.getElementById(tabId);
-        console.log('Activating tab content:', tabId, tabContent);
+        console.log('[Tab Switch] Activating tab content:', tabId, tabContent);
         if (tabContent) {
           tabContent.classList.add('active');
+          tabContent.style.display = 'block'; // Force show
+          // Extra debug: log classList and computed style
+          console.log('[Tab Switch] tabContent.classList:', tabContent.classList.toString());
+          console.log('[Tab Switch] tabContent computed display:', window.getComputedStyle(tabContent).display);
+        } else {
+          console.warn('[Tab Switch] Tab content not found for:', tabId);
         }
       });
     });

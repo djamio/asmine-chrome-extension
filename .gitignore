@@ -65,4 +65,4 @@ jspm_packages/
 
 # Chrome extension specific
 *.crx
-*.pem 
+*.pem

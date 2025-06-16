@@ -1389,12 +1389,21 @@
 }
 
 .pricing-tab-content {
-  display: none;
+  display: none !important;
   padding: 30px;
 }
 
 .pricing-tab-content.active {
-  display: block;
+  display: block !important;
+}
+
+/* Ensure pricing modal tabs are visible when active */
+#pricingModal .pricing-tab-content.active {
+  display: block !important;
+}
+
+#pricingModal .pricing-tab-content:not(.active) {
+  display: none !important;
 }
 
 /* Current Product Tab */

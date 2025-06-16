@@ -284,13 +284,13 @@ class WooAuth {
       });
       console.log('Dispatching wooAuthChanged event:', event);
       document.dispatchEvent(event);
-
+        
     } catch (error) {
       console.error('Reset auth error:', error);
       this.showError('Failed to reset authentication. Please try again.');
       throw error;
     }
-  }
+        }
 
   // Check if we have valid credentials
   hasValidCredentials() {
@@ -320,7 +320,7 @@ class WooAuth {
         };
       }
       return null;
-    } catch (error) {
+      } catch (error) {
       console.error('Error getting stored credentials:', error);
       return null;
     }
@@ -666,7 +666,7 @@ function initWooAuth() {
         if (typeof window !== 'undefined') {
           window.WooAuth = WooAuth;
         }
-                window.wooAuth.init().catch(error => {
+        window.wooAuth.init().catch(error => {
           console.error('Error initializing WooAuth:', error);
         });
       } catch (error) {

@@ -395,7 +395,8 @@ function createAuditModal() {
   // Add close button functionality
   const closeButton = modal.querySelector('.close');
   closeButton.addEventListener('click', () => {
-    modal.querySelector('.audit-modal').style.display = 'none';
+    // Remove the modal from the DOM entirely
+    modal.remove();
   });
 
   return modal;

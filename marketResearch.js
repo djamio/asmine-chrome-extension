@@ -99,7 +99,7 @@ Return your output in the following JSON format:
 
 Please ensure the response is valid JSON and includes all required fields.
  also make sure that the product url are valid url and are not redirecting to product not found page
- also make sure to do the research on the country associated to the language of the product`;
+ return only the json and nothing else`;
 
       // Find ChatGPT's input area and send the prompt
       try {
@@ -150,21 +150,48 @@ Please ensure the response is valid JSON and includes all required fields.
           
           // Use the extractLastJSONFromChatGPT function with validator
           const parsed = extractLastJSONFromChatGPT((json) => {
-            // Check if this is a valid market research response for our current product
-            const isValidStructure = json && json.currentProduct && json.trendingComparisons && json.trendAnalysis;
-            const isForCurrentProduct = json.currentProduct && json.currentProduct.title === (product.title || product.name);
-            
-            console.log('Validating market research JSON:', {
-              isValidStructure,
-              isForCurrentProduct,
-              expectedTitle: product.title || product.name,
-              actualTitle: json.currentProduct ? json.currentProduct.title : 'none',
-              hasCurrentProduct: !!json.currentProduct,
-              hasTrendingComparisons: !!json.trendingComparisons,
-              hasTrendAnalysis: !!json.trendAnalysis
-            });
-            
-            return isValidStructure && isForCurrentProduct;
+            try {
+                // Check if this is a valid market research response
+                if (!json || typeof json !== 'object') {
+                    console.log('Invalid JSON: not an object');
+                    return false;
+                }
+
+                // Check required fields
+                const hasRequiredFields = 
+                    json.currentProduct && 
+                    json.trendingComparisons && 
+                    json.trendAnalysis &&
+                    Array.isArray(json.trendingComparisons);
+
+                if (!hasRequiredFields) {
+                    console.log('Invalid JSON: missing required fields', {
+                        hasCurrentProduct: !!json.currentProduct,
+                        hasTrendingComparisons: !!json.trendingComparisons,
+                        hasTrendAnalysis: !!json.trendAnalysis,
+                        isTrendingComparisonsArray: Array.isArray(json.trendingComparisons)
+                    });
+                    return false;
+                }
+
+                // Check if this is for our current product
+                const currentProductTitle = (product.title || product.name || '').trim().toLowerCase();
+                const jsonProductTitle = (json.currentProduct.title || '').trim().toLowerCase();
+                
+                const isForCurrentProduct = currentProductTitle === jsonProductTitle;
+                
+                console.log('Validating market research JSON:', {
+                    hasRequiredFields,
+                    isForCurrentProduct,
+                    expectedTitle: currentProductTitle,
+                    actualTitle: jsonProductTitle
+                });
+                
+                return isForCurrentProduct;
+            } catch (error) {
+                console.error('Error validating JSON:', error);
+                return false;
+            }
           });
           
           if (parsed) {
@@ -297,8 +324,8 @@ Please ensure the response is valid JSON and includes all required fields.
     
     // Check if modal already exists
     if (document.getElementById('marketResearchModal')) {
-      console.log('Market research modal already exists, skipping creation');
-      return;
+        console.log('Market research modal already exists, skipping creation');
+        return;
     }
 
     const modalHTML = `
@@ -315,7 +342,7 @@ Please ensure the response is valid JSON and includes all required fields.
               <button class="market-research-tab-btn" data-tab="analysis">Trend Analysis</button>
             </div>
             
-            <div id="market-tab-current" class="market-research-tab-content active">
+            <div id="market-tab-current" class="market-research-tab-content active" style="display: block;">
               <div class="current-product-info">
                 <h3>Current Product Details</h3>
                 <div class="product-details">
@@ -325,7 +352,7 @@ Please ensure the response is valid JSON and includes all required fields.
               </div>
             </div>
             
-            <div id="market-tab-trending" class="market-research-tab-content">
+            <div id="market-tab-trending" class="market-research-tab-content" style="display: none;">
               <div class="trending-products">
                 <h3>Trending Products</h3>
                 <div id="market-trending-list" class="trending-grid">
@@ -334,7 +361,7 @@ Please ensure the response is valid JSON and includes all required fields.
               </div>
             </div>
             
-            <div id="market-tab-analysis" class="market-research-tab-content">
+            <div id="market-tab-analysis" class="market-research-tab-content" style="display: none;">
               <div class="trend-analysis-details">
                 <h3>Trend Analysis</h3>
                 <div class="analysis-summary">
@@ -366,8 +393,8 @@ Please ensure the response is valid JSON and includes all required fields.
     console.log('Found created modal:', modal);
     
     if (!modal) {
-      console.error('Failed to find market research modal after creation');
-      return;
+        console.error('Failed to find market research modal after creation');
+        return;
     }
     
     const closeBtn = modal.querySelector('.close-market-research-modal');
@@ -376,34 +403,40 @@ Please ensure the response is valid JSON and includes all required fields.
     console.log('Found modal elements:', { closeBtn, tabBtns: tabBtns.length });
 
     closeBtn.addEventListener('click', () => {
-      console.log('Closing market research modal');
-      modal.style.display = 'none';
+        console.log('Closing market research modal');
+        modal.style.display = 'none';
     });
 
     tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        console.log('Switching to tab:', btn.getAttribute('data-tab'));
-        // Remove active class from all tabs
-        tabBtns.forEach(b => b.classList.remove('active'));
-        modal.querySelectorAll('.market-research-tab-content').forEach(content => content.classList.remove('active'));
-        
-        // Add active class to clicked tab
-        btn.classList.add('active');
-        const tabId = 'market-tab-' + btn.getAttribute('data-tab');
-        const tabContent = document.getElementById(tabId);
-        console.log('Activating tab content:', tabId, tabContent);
-        if (tabContent) {
-          tabContent.classList.add('active');
-        }
-      });
+        btn.addEventListener('click', () => {
+            console.log('Switching to tab:', btn.getAttribute('data-tab'));
+            
+            // Remove active class from all tabs and hide all content
+            tabBtns.forEach(b => b.classList.remove('active'));
+            modal.querySelectorAll('.market-research-tab-content').forEach(content => {
+                content.classList.remove('active');
+                content.style.display = 'none';
+            });
+            
+            // Add active class to clicked tab and show its content
+            btn.classList.add('active');
+            const tabId = 'market-tab-' + btn.getAttribute('data-tab');
+            const tabContent = document.getElementById(tabId);
+            console.log('Activating tab content:', tabId, tabContent);
+            
+            if (tabContent) {
+                tabContent.classList.add('active');
+                tabContent.style.display = 'block';
+            }
+        });
     });
 
     // Close modal when clicking outside
     window.addEventListener('click', (event) => {
-      if (event.target === modal) {
-        console.log('Closing market research modal (clicked outside)');
-        modal.style.display = 'none';
-      }
+        if (event.target === modal) {
+            console.log('Closing market research modal (clicked outside)');
+            modal.style.display = 'none';
+        }
     });
     
     console.log('Market research modal created successfully with event listeners');
@@ -412,100 +445,121 @@ Please ensure the response is valid JSON and includes all required fields.
   // Function to update market research modal content
   function updateMarketResearchModalContent(modal, product, analysisResults) {
     if (!modal || !product || !analysisResults) {
-      console.error('Missing required data for market research modal update:', { modal, product, analysisResults });
-      return;
+        console.error('Missing required data for market research modal update:', { modal, product, analysisResults });
+        return;
     }
+
+    console.log('Updating market research modal content with:', { product, analysisResults });
 
     // Update current product tab
     const currentTitleElement = document.getElementById('market-current-title');
     const currentAnalysisElement = document.getElementById('market-current-analysis');
     
     if (currentTitleElement && analysisResults.currentProduct) {
-      currentTitleElement.textContent = analysisResults.currentProduct.title || product.title || product.name;
+        currentTitleElement.textContent = analysisResults.currentProduct.title || product.title || product.name;
+        console.log('Updated current product title:', currentTitleElement.textContent);
     }
     
     if (currentAnalysisElement && analysisResults.currentProduct) {
-      currentAnalysisElement.textContent = analysisResults.currentProduct.analysis || 'No analysis available';
+        currentAnalysisElement.textContent = analysisResults.currentProduct.analysis || 'No analysis available';
+        console.log('Updated current product analysis:', currentAnalysisElement.textContent);
     }
 
     // Update trending products tab
     const trendingList = document.getElementById('market-trending-list');
     if (trendingList && analysisResults.trendingComparisons && Array.isArray(analysisResults.trendingComparisons)) {
-      trendingList.innerHTML = analysisResults.trendingComparisons.map((trendingProduct, index) => {
-        // Handle gallery images
-        let galleryHTML = '';
-        if (trendingProduct.galleryImages && Array.isArray(trendingProduct.galleryImages) && trendingProduct.galleryImages.length > 0) {
-          galleryHTML = `
-            <div class="product-gallery">
-              <h5>Gallery Images:</h5>
-              <div class="gallery-grid">
-                ${trendingProduct.galleryImages.map(img => `
-                  <img src="${img}" alt="Product image" class="gallery-image" onerror="this.style.display='none'">
-                `).join('')}
-              </div>
-            </div>
-          `;
-        }
+        console.log('Updating trending products list with', analysisResults.trendingComparisons.length, 'products');
+        
+        trendingList.innerHTML = analysisResults.trendingComparisons.map((trendingProduct, index) => {
+            console.log('Processing trending product', index + 1, ':', trendingProduct.title);
+            
+            // Handle gallery images
+            let galleryHTML = '';
+            if (trendingProduct.galleryImages && Array.isArray(trendingProduct.galleryImages) && trendingProduct.galleryImages.length > 0) {
+                galleryHTML = `
+                    <div class="product-gallery">
+                        <h5>Gallery Images:</h5>
+                        <div class="gallery-grid">
+                            ${trendingProduct.galleryImages.map(img => `
+                                <img src="${img}" alt="Product image" class="gallery-image" onerror="this.style.display='none'">
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
 
-        // Handle description
-        let descriptionHTML = '';
-        if (trendingProduct.description) {
-          descriptionHTML = `
-            <div class="product-description">
-              <h5>Description:</h5>
-              <p>${trendingProduct.description}</p>
-            </div>
-          `;
-        }
+            // Handle description
+            let descriptionHTML = '';
+            if (trendingProduct.description) {
+                descriptionHTML = `
+                    <div class="product-description">
+                        <h5>Description:</h5>
+                        <p>${trendingProduct.description}</p>
+                    </div>
+                `;
+            }
 
-        // Handle specifications
-        let specificationsHTML = '';
-        if (trendingProduct.specifications && Array.isArray(trendingProduct.specifications) && trendingProduct.specifications.length > 0) {
-          specificationsHTML = `
-            <div class="product-specifications">
-              <h5>Specifications:</h5>
-              <ul>
-                ${trendingProduct.specifications.map(spec => `<li>${spec}</li>`).join('')}
-              </ul>
-            </div>
-          `;
-        }
+            // Handle specifications
+            let specificationsHTML = '';
+            if (trendingProduct.specifications && Array.isArray(trendingProduct.specifications) && trendingProduct.specifications.length > 0) {
+                specificationsHTML = `
+                    <div class="product-specifications">
+                        <h5>Specifications:</h5>
+                        <ul>
+                            ${trendingProduct.specifications.map(spec => `<li>${spec}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
 
-        return `
-          <div class="trending-item">
-            <h4>${trendingProduct.title || 'No title'}</h4>
-            <div class="product-stats">
-              <p><strong>Price:</strong> $${trendingProduct.price || 'N/A'}</p>
-              <p><strong>Platform:</strong> ${trendingProduct.platform || 'N/A'}</p>
-              <p><strong>Rating:</strong> ${trendingProduct.rating || 'N/A'}/5 (${trendingProduct.reviews || 'N/A'} reviews)</p>
-            </div>
-            ${galleryHTML}
-            ${descriptionHTML}
-            ${specificationsHTML}
-            <p><strong>URL:</strong> <a href="${trendingProduct.productUrl || '#'}" target="_blank" rel="noopener noreferrer">View Product</a></p>
-          </div>
-        `;
-      }).join('');
+            return `
+                <div class="trending-item">
+                    <h4>${trendingProduct.title || 'No title'}</h4>
+                    <div class="product-stats">
+                        <p><strong>Price:</strong> ${trendingProduct.price ? '€' + trendingProduct.price : 'N/A'}</p>
+                        <p><strong>Platform:</strong> ${trendingProduct.platform || 'N/A'}</p>
+                        <p><strong>Rating:</strong> ${trendingProduct.rating ? trendingProduct.rating + '/5' : 'N/A'} ${trendingProduct.reviews ? '(' + trendingProduct.reviews + ' reviews)' : ''}</p>
+                    </div>
+                    ${galleryHTML}
+                    ${descriptionHTML}
+                    ${specificationsHTML}
+                    <p><strong>URL:</strong> <a href="${trendingProduct.productUrl || '#'}" target="_blank" rel="noopener noreferrer">View Product</a></p>
+                </div>
+            `;
+        }).join('');
+        
+        console.log('Updated trending products list');
     }
 
     // Update trend analysis tab
     if (analysisResults.trendAnalysis) {
-      const seasonalBadge = document.getElementById('market-seasonal-relevance');
-      const popularityReasonElement = document.getElementById('market-popularity-reason');
-      const recommendationElement = document.getElementById('market-recommendation-text');
-      
-      if (seasonalBadge && analysisResults.trendAnalysis.seasonalRelevance) {
-        seasonalBadge.textContent = analysisResults.trendAnalysis.seasonalRelevance;
-        seasonalBadge.className = `seasonal-badge ${analysisResults.trendAnalysis.seasonalRelevance.replace(/\s+/g, '-').toLowerCase()}`;
-      }
-      
-      if (popularityReasonElement && analysisResults.trendAnalysis.popularityReason) {
-        popularityReasonElement.textContent = analysisResults.trendAnalysis.popularityReason;
-      }
-      
-      if (recommendationElement && analysisResults.trendAnalysis.recommendation) {
-        recommendationElement.textContent = analysisResults.trendAnalysis.recommendation;
-      }
+        console.log('Updating trend analysis tab');
+        
+        const seasonalBadge = document.getElementById('market-seasonal-relevance');
+        const popularityReasonElement = document.getElementById('market-popularity-reason');
+        const recommendationElement = document.getElementById('market-recommendation-text');
+        
+        if (seasonalBadge && analysisResults.trendAnalysis.seasonalRelevance) {
+            seasonalBadge.textContent = analysisResults.trendAnalysis.seasonalRelevance;
+            seasonalBadge.className = `seasonal-badge ${analysisResults.trendAnalysis.seasonalRelevance.replace(/\s+/g, '-').toLowerCase()}`;
+            console.log('Updated seasonal relevance:', seasonalBadge.textContent);
+        }
+        
+        if (popularityReasonElement && analysisResults.trendAnalysis.popularityReason) {
+            popularityReasonElement.textContent = analysisResults.trendAnalysis.popularityReason;
+            console.log('Updated popularity reason');
+        }
+        
+        if (recommendationElement && analysisResults.trendAnalysis.recommendation) {
+            recommendationElement.textContent = analysisResults.trendAnalysis.recommendation;
+            console.log('Updated recommendation');
+        }
+    }
+
+    // Ensure the first tab is visible
+    const firstTab = modal.querySelector('.market-research-tab-btn');
+    if (firstTab) {
+        firstTab.click();
     }
   }
 
@@ -529,47 +583,76 @@ Please ensure the response is valid JSON and includes all required fields.
     const messages = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
 
     if (messages.length === 0) {
-      console.log("No assistant messages found for market research");
-      return null;
+        console.log("No assistant messages found for market research");
+        return null;
     }
 
     // Only look at the most recent assistant message
     const lastMessage = messages[messages.length - 1];
     console.log("Checking last assistant message for market research JSON");
 
+    // First try to find JSON in code blocks
     const codeBlocks = lastMessage.querySelectorAll('pre code');
-
     console.log("Found", codeBlocks.length, "code blocks in last message");
 
     for (const code of codeBlocks) {
-      try {
-        // Attempt to parse the content as JSON
-        const text = code.textContent.trim();
-        console.log("Attempting to parse code block:", text.substring(0, 100) + "...");
+        try {
+            const text = code.textContent.trim();
+            console.log("Attempting to parse code block:", text.substring(0, 100) + "...");
 
-        // Use regex to isolate the JSON if extra characters exist before/after
-        const match = text.match(/{[\s\S]*}/);
-        if (match) {
-          const json = JSON.parse(match[0]);
-          console.log("Extracted JSON from last message:", json);
-          
-          // If a validator function is provided, use it to check the JSON structure
-          if (validator && typeof validator === 'function') {
-            if (validator(json)) {
-              console.log("JSON passed validator for market research");
-              return json;
-            } else {
-              console.log("JSON failed validator for market research");
+            // Try to find JSON object in the text
+            let jsonText = text;
+            
+            // If there's text before/after JSON, try to extract just the JSON
+            const jsonMatch = text.match(/(\{[\s\S]*\})/);
+            if (jsonMatch) {
+                jsonText = jsonMatch[1];
             }
-          } else {
-            return json; // Return any valid JSON if no validator
-          }
+
+            // Try to parse the JSON
+            const json = JSON.parse(jsonText);
+            console.log("Successfully parsed JSON from code block");
+
+            // If a validator function is provided, use it to check the JSON structure
+            if (validator && typeof validator === 'function') {
+                if (validator(json)) {
+                    console.log("JSON passed validator for market research");
+                    return json;
+                } else {
+                    console.log("JSON failed validator for market research");
+                }
+            } else {
+                return json;
+            }
+        } catch (e) {
+            console.log("Failed to parse JSON from code block:", e.message);
+            continue;
         }
-      } catch (e) {
-        // Not valid JSON, continue
-        console.log("Failed to parse JSON from code block:", e.message);
-        continue;
-      }
+    }
+
+    // If no valid JSON found in code blocks, try the entire message text
+    try {
+        const messageText = lastMessage.textContent.trim();
+        console.log("Attempting to parse entire message text");
+        
+        // Try to find JSON object in the message
+        const jsonMatch = messageText.match(/(\{[\s\S]*\})/);
+        if (jsonMatch) {
+            const jsonText = jsonMatch[1];
+            const json = JSON.parse(jsonText);
+            console.log("Successfully parsed JSON from message text");
+
+            if (validator && typeof validator === 'function') {
+                if (validator(json)) {
+                    console.log("JSON passed validator for market research");
+                    return json;
+                }
+            } else {
+                return json;
+            }
+        }
+    } catch (e) {
+        console.log("Failed to parse JSON from message text:", e.message);
     }
 
     console.warn("No valid market research JSON found in the last assistant message.");

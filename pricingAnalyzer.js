@@ -305,8 +305,10 @@ return only the json object and nothing else`;
 
   // Function to create pricing analysis modal
   function createPricingModal() {
+    console.log('Creating pricing modal...');
     // Check if modal already exists
     if (document.getElementById('pricingModal')) {
+      console.log('Pricing modal already exists, returning...');
       return;
     }
 
@@ -370,51 +372,72 @@ return only the json object and nothing else`;
       </div>
     `;
 
+    console.log('Inserting modal HTML into body...');
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
     // Add event listeners for modal
     const modal = document.getElementById('pricingModal');
+    console.log('Found created modal:', modal);
+    
     const closeBtn = modal.querySelector('.close-pricing-modal');
     const tabBtns = modal.querySelectorAll('.pricing-tab-btn');
+    
+    console.log('Found modal elements:', { closeBtn, tabBtns: tabBtns.length });
 
     closeBtn.addEventListener('click', () => {
+      console.log('Closing pricing modal');
       modal.style.display = 'none';
     });
 
     tabBtns.forEach(btn => {
       btn.addEventListener('click', () => {
+        console.log('Switching to tab:', btn.getAttribute('data-tab'));
         // Remove active class from all tabs
         tabBtns.forEach(b => b.classList.remove('active'));
-        modal.querySelectorAll('.pricing-tab-content').forEach(content => content.classList.remove('active'));
+        modal.querySelectorAll('.pricing-tab-content').forEach(content => {
+          console.log('Removing active class from tab content:', content.id);
+          content.classList.remove('active');
+        });
         
         // Add active class to clicked tab
         btn.classList.add('active');
         const tabId = 'tab-' + btn.getAttribute('data-tab');
-        document.getElementById(tabId).classList.add('active');
+        const tabContent = document.getElementById(tabId);
+        console.log('Activating tab content:', tabId, tabContent);
+        if (tabContent) {
+          tabContent.classList.add('active');
+        }
       });
     });
 
     // Close modal when clicking outside
     window.addEventListener('click', (event) => {
       if (event.target === modal) {
+        console.log('Closing pricing modal (clicked outside)');
         modal.style.display = 'none';
       }
     });
+    
+    console.log('Pricing modal created successfully with event listeners');
   }
 
   // Function to update pricing modal content
   function updatePricingModalContent(modal, product, analysisResults) {
+    console.log('Updating pricing modal content...', { modal, product, analysisResults });
+    
     if (!modal || !product || !analysisResults) {
       console.error('Missing required data for pricing modal update:', { modal, product, analysisResults });
       return;
     }
 
     // Update current product tab
+    console.log('Updating current product tab...');
     document.getElementById('current-title').textContent = analysisResults.currentProduct.title;
     document.getElementById('current-price').textContent = `$${analysisResults.currentProduct.price}`;
     document.getElementById('current-analysis').textContent = analysisResults.currentProduct.analysis;
 
     // Update market comparisons tab
+    console.log('Updating market comparisons tab...');
     const comparisonsList = document.getElementById('comparisons-list');
     comparisonsList.innerHTML = analysisResults.marketComparisons.map(comparison => `
       <div class="comparison-item">
@@ -425,6 +448,7 @@ return only the json object and nothing else`;
     `).join('');
 
     // Update pricing analysis tab
+    console.log('Updating pricing analysis tab...');
     const positionBadge = document.getElementById('pricing-position');
     positionBadge.textContent = analysisResults.pricingAnalysis.pricingPosition;
     positionBadge.className = `position-badge ${analysisResults.pricingAnalysis.pricingPosition}`;
@@ -433,6 +457,8 @@ return only the json object and nothing else`;
     document.getElementById('price-difference').textContent = `$${analysisResults.pricingAnalysis.priceDifference}`;
     document.getElementById('percentage-change').textContent = `${analysisResults.pricingAnalysis.priceDifferencePercentage}%`;
     document.getElementById('recommendation-text').textContent = analysisResults.pricingAnalysis.recommendation;
+    
+    console.log('Pricing modal content update completed');
   }
 
   // Function to attach pricing analysis button listeners

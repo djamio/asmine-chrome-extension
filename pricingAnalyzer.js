@@ -91,7 +91,8 @@ Return your answer in the following **JSON format**:
 }
 
 Please ensure the response is valid JSON and includes all required fields.
- also make sure to do the research on the country associated to the language of the product`;
+provide the analysis in the same language as the product title
+return only the json object and nothing else`;
 
       // Find ChatGPT's input area and send the prompt
       try {
@@ -144,16 +145,49 @@ Please ensure the response is valid JSON and includes all required fields.
           const parsed = extractLastJSONFromChatGPT((json) => {
             // Check if this is a valid pricing analysis response for our current product
             const isValidStructure = json && json.currentProduct && json.marketComparisons && json.pricingAnalysis;
-            const isForCurrentProduct = json.currentProduct && json.currentProduct.title === (product.title || product.name);
+            
+            // More flexible title matching
+            const originalTitle = (product.title || product.name).toLowerCase().trim();
+            const responseTitle = (json.currentProduct?.title || '').toLowerCase().trim();
+            
+            // Normalize titles by removing extra spaces and standardizing separators
+            const normalizeTitle = (title) => {
+              return title
+                .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+                .replace(/\s*[|]\s*/g, ' | ')  // Standardize separator spacing
+                .replace(/\s*[-]\s*/g, ' - ')  // Standardize hyphen spacing
+                .trim();
+            };
+            
+            const normalizedOriginal = normalizeTitle(originalTitle);
+            const normalizedResponse = normalizeTitle(responseTitle);
+            
+            // Check if the normalized titles match
+            const titlesMatch = normalizedOriginal === normalizedResponse;
+            
+            // If titles don't match exactly, check if they contain the same key information
+            const hasKeyInfo = !titlesMatch ? (
+              // Check if all words from original title (excluding common words) are in response
+              normalizedOriginal
+                .split(/\s+/)
+                .filter(word => 
+                  word.length > 2 && // Ignore very short words
+                  !['for', 'and', 'the', 'with', '|', '-', '🇫🇷'].includes(word.toLowerCase()) // Ignore common words
+                )
+                .every(word => normalizedResponse.includes(word))
+            ) : true;
             
             console.log('Validating pricing analysis JSON:', {
               isValidStructure,
-              isForCurrentProduct,
+              titlesMatch,
+              hasKeyInfo,
+              normalizedOriginal,
+              normalizedResponse,
               expectedTitle: product.title || product.name,
               actualTitle: json.currentProduct ? json.currentProduct.title : 'none'
             });
             
-            return isValidStructure && isForCurrentProduct;
+            return isValidStructure && hasKeyInfo;
           });
           
           if (parsed) {

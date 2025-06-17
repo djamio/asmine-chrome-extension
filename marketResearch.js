@@ -138,6 +138,17 @@ Please ensure the response is valid JSON and includes all required fields.
       // Monitor ChatGPT's response
       let debounceTimer;
       let responseCount = 0;
+      let timeoutTimer;
+      
+      // Timeout: stop spinner and show warning if no valid JSON after 15 seconds
+      timeoutTimer = setTimeout(() => {
+        // Remove spinner and re-enable button
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-1.94-3.07M9 19v-3.87a3.37 3.37 0 0 1 1.94-3.07M9 19v-6m0 0V9a3 3 0 0 1 3-3h0a3 3 0 0 1 3 3v0m-6 0h6m-6 0H9"/></svg>`;
+        // Show warning notification
+        showNotification('warning', 'Timeout', 'No valid market research response received from ChatGPT after 15 seconds. Please try again or rephrase your prompt.');
+      }, 15000);
+
       researchObserver = new MutationObserver((mutations) => {
         console.log('Market Research MutationObserver triggered, mutations:', mutations.length);
         
@@ -195,6 +206,8 @@ Please ensure the response is valid JSON and includes all required fields.
           });
           
           if (parsed) {
+            // If valid JSON is found, clear the timeout
+            clearTimeout(timeoutTimer);
             console.log('Found valid market research results JSON:', parsed);
             
             // Check if this result is from our current request by checking the timestamp
@@ -591,7 +604,7 @@ Please ensure the response is valid JSON and includes all required fields.
     const lastMessage = messages[messages.length - 1];
     console.log("Checking last assistant message for market research JSON");
 
-    // First try to find JSON in code blocks
+    // Method 1: Try to extract JSON from code blocks first
     const codeBlocks = lastMessage.querySelectorAll('pre code');
     console.log("Found", codeBlocks.length, "code blocks in last message");
 
@@ -630,17 +643,58 @@ Please ensure the response is valid JSON and includes all required fields.
         }
     }
 
-    // If no valid JSON found in code blocks, try the entire message text
+    // Method 2: Try to extract JSON from HTML-formatted content
+    try {
+        const messageHTML = lastMessage.innerHTML;
+        console.log("Attempting to extract JSON from HTML-formatted content for market research");
+        
+        // Find JSON within HTML content
+        const jsonMatch = messageHTML.match(/{[\s\S]*}/);
+        if (jsonMatch) {
+            let jsonString = jsonMatch[0];
+            
+            // Clean HTML entities and tags
+            jsonString = jsonString
+                .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+                .replace(/<br\s*\/?>/gi, '\n') // Replace <br> tags with newlines
+                .replace(/<[^>]*>/g, '') // Remove all HTML tags
+                .replace(/&amp;/g, '&') // Replace &amp; with &
+                .replace(/&lt;/g, '<') // Replace &lt; with <
+                .replace(/&gt;/g, '>') // Replace &gt; with >
+                .replace(/&quot;/g, '"') // Replace &quot; with "
+                .replace(/&#39;/g, "'") // Replace &#39; with '
+                .trim();
+            
+            const json = JSON.parse(jsonString);
+            console.log("Extracted JSON from HTML-formatted content for market research:", json);
+            
+            // If a validator function is provided, use it to check the JSON structure
+            if (validator && typeof validator === 'function') {
+                if (validator(json)) {
+                    console.log("JSON from HTML-formatted content passed validator for market research");
+                    return json;
+                } else {
+                    console.log("JSON from HTML-formatted content failed validator for market research");
+                }
+            } else {
+                return json; // Return any valid JSON if no validator
+            }
+        }
+    } catch (e) {
+        console.log("Failed to parse JSON from HTML-formatted content for market research:", e.message);
+    }
+
+    // Method 3: Try to extract JSON from the entire message text (for raw JSON responses)
     try {
         const messageText = lastMessage.textContent.trim();
-        console.log("Attempting to parse entire message text");
+        console.log("Attempting to parse entire message text for market research");
         
         // Try to find JSON object in the message
         const jsonMatch = messageText.match(/(\{[\s\S]*\})/);
         if (jsonMatch) {
             const jsonText = jsonMatch[1];
             const json = JSON.parse(jsonText);
-            console.log("Successfully parsed JSON from message text");
+            console.log("Successfully parsed JSON from message text for market research");
 
             if (validator && typeof validator === 'function') {
                 if (validator(json)) {
@@ -652,7 +706,37 @@ Please ensure the response is valid JSON and includes all required fields.
             }
         }
     } catch (e) {
-        console.log("Failed to parse JSON from message text:", e.message);
+        console.log("Failed to parse JSON from message text for market research:", e.message);
+    }
+
+    // Method 4: Try to clean up and parse the entire message as JSON
+    try {
+        const messageText = lastMessage.textContent || lastMessage.innerText;
+        const cleanedText = messageText.trim();
+        
+        // Remove common prefixes/suffixes that might be added by ChatGPT
+        const jsonStart = cleanedText.indexOf('{');
+        const jsonEnd = cleanedText.lastIndexOf('}');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            const jsonString = cleanedText.substring(jsonStart, jsonEnd + 1);
+            const json = JSON.parse(jsonString);
+            console.log("Extracted JSON from cleaned message text for market research:", json);
+            
+            // If a validator function is provided, use it to check the JSON structure
+            if (validator && typeof validator === 'function') {
+                if (validator(json)) {
+                    console.log("JSON from cleaned message text passed validator for market research");
+                    return json;
+                } else {
+                    console.log("JSON from cleaned message text failed validator for market research");
+                }
+            } else {
+                return json; // Return any valid JSON if no validator
+            }
+        }
+    } catch (e) {
+        console.log("Failed to parse JSON from cleaned message text for market research:", e.message);
     }
 
     console.warn("No valid market research JSON found in the last assistant message.");

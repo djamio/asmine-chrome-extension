@@ -100,7 +100,7 @@ Return your answer in the following **JSON format**:
 
 Please ensure the response is valid JSON and includes all required fields.
 provide the analysis in the same language as the product title
-return only the json object and nothing else`;
+return only the json and nothing else`;
 
       // Find ChatGPT's input area and send the prompt
       try {
@@ -139,16 +139,24 @@ return only the json object and nothing else`;
       // Monitor ChatGPT's response
       let debounceTimer;
       let responseCount = 0;
+      let timeoutTimer;
+      
+      // Timeout: stop spinner and show warning if no valid JSON after 15 seconds
+      timeoutTimer = setTimeout(() => {
+        // Remove spinner and re-enable button
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+        // Show warning notification
+        showNotification('warning', 'Timeout', 'No valid pricing analysis response received from ChatGPT after 15 seconds. Please try again or rephrase your prompt.');
+      }, 15000);
+
       pricingObserver = new MutationObserver((mutations) => {
         console.log('Pricing Analysis MutationObserver triggered, mutations:', mutations.length);
-        
         // Clear any existing timer
         clearTimeout(debounceTimer);
-        
         // Set a new timer to process the latest state
         debounceTimer = setTimeout(() => {
           console.log('Processing final state after mutations for pricing analysis');
-          
           // Use the extractLastJSONFromChatGPT function with validator
           const parsed = extractLastJSONFromChatGPT((json) => {
             // Check if this is a valid pricing analysis response structure
@@ -215,6 +223,8 @@ return only the json object and nothing else`;
           });
           
           if (parsed) {
+            // If valid JSON is found, clear the timeout
+            clearTimeout(timeoutTimer);
             console.log('Found valid pricing analysis results JSON:', parsed);
             
             // Check if this result is from our current request by checking the timestamp
@@ -525,8 +535,8 @@ return only the json object and nothing else`;
     const lastMessage = messages[messages.length - 1];
     console.log("Checking last assistant message for pricing analysis JSON");
 
+    // Method 1: Try to extract JSON from code blocks first
     const codeBlocks = lastMessage.querySelectorAll('pre code');
-
     for (const code of codeBlocks) {
       try {
         // Attempt to parse the content as JSON
@@ -536,15 +546,15 @@ return only the json object and nothing else`;
         const match = text.match(/{[\s\S]*}/);
         if (match) {
           const json = JSON.parse(match[0]);
-          console.log("Extracted JSON from last message:", json);
+          console.log("Extracted JSON from code block:", json);
           
           // If a validator function is provided, use it to check the JSON structure
           if (validator && typeof validator === 'function') {
             if (validator(json)) {
-              console.log("JSON passed validator for pricing analysis");
+              console.log("JSON from code block passed validator for pricing analysis");
               return json;
             } else {
-              console.log("JSON failed validator for pricing analysis");
+              console.log("JSON from code block failed validator for pricing analysis");
             }
           } else {
             return json; // Return any valid JSON if no validator
@@ -555,6 +565,104 @@ return only the json object and nothing else`;
         console.log("Failed to parse JSON from code block:", e.message);
         continue;
       }
+    }
+
+    // Method 2: Try to extract JSON from HTML-formatted content
+    try {
+      const messageHTML = lastMessage.innerHTML;
+      console.log("Attempting to extract JSON from HTML-formatted content");
+      
+      // Find JSON within HTML content
+      const jsonMatch = messageHTML.match(/{[\s\S]*}/);
+      if (jsonMatch) {
+        let jsonString = jsonMatch[0];
+        
+        // Clean HTML entities and tags
+        jsonString = jsonString
+          .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+          .replace(/<br\s*\/?>/gi, '\n') // Replace <br> tags with newlines
+          .replace(/<[^>]*>/g, '') // Remove all HTML tags
+          .replace(/&amp;/g, '&') // Replace &amp; with &
+          .replace(/&lt;/g, '<') // Replace &lt; with <
+          .replace(/&gt;/g, '>') // Replace &gt; with >
+          .replace(/&quot;/g, '"') // Replace &quot; with "
+          .replace(/&#39;/g, "'") // Replace &#39; with '
+          .trim();
+        
+        const json = JSON.parse(jsonString);
+        console.log("Extracted JSON from HTML-formatted content:", json);
+        
+        // If a validator function is provided, use it to check the JSON structure
+        if (validator && typeof validator === 'function') {
+          if (validator(json)) {
+            console.log("JSON from HTML-formatted content passed validator for pricing analysis");
+            return json;
+          } else {
+            console.log("JSON from HTML-formatted content failed validator for pricing analysis");
+          }
+        } else {
+          return json; // Return any valid JSON if no validator
+        }
+      }
+    } catch (e) {
+      console.log("Failed to parse JSON from HTML-formatted content:", e.message);
+    }
+
+    // Method 3: Try to extract JSON from the entire message text (for raw JSON responses)
+    try {
+      const messageText = lastMessage.textContent || lastMessage.innerText;
+      console.log("Attempting to extract JSON from entire message text");
+      
+      // Use regex to find JSON object in the text
+      const jsonMatch = messageText.match(/{[\s\S]*}/);
+      if (jsonMatch) {
+        const json = JSON.parse(jsonMatch[0]);
+        console.log("Extracted JSON from message text:", json);
+        
+        // If a validator function is provided, use it to check the JSON structure
+        if (validator && typeof validator === 'function') {
+          if (validator(json)) {
+            console.log("JSON from message text passed validator for pricing analysis");
+            return json;
+          } else {
+            console.log("JSON from message text failed validator for pricing analysis");
+          }
+        } else {
+          return json; // Return any valid JSON if no validator
+        }
+      }
+    } catch (e) {
+      console.log("Failed to parse JSON from message text:", e.message);
+    }
+
+    // Method 4: Try to clean up and parse the entire message as JSON
+    try {
+      const messageText = lastMessage.textContent || lastMessage.innerText;
+      const cleanedText = messageText.trim();
+      
+      // Remove common prefixes/suffixes that might be added by ChatGPT
+      const jsonStart = cleanedText.indexOf('{');
+      const jsonEnd = cleanedText.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        const jsonString = cleanedText.substring(jsonStart, jsonEnd + 1);
+        const json = JSON.parse(jsonString);
+        console.log("Extracted JSON from cleaned message text:", json);
+        
+        // If a validator function is provided, use it to check the JSON structure
+        if (validator && typeof validator === 'function') {
+          if (validator(json)) {
+            console.log("JSON from cleaned message text passed validator for pricing analysis");
+            return json;
+          } else {
+            console.log("JSON from cleaned message text failed validator for pricing analysis");
+          }
+        } else {
+          return json; // Return any valid JSON if no validator
+        }
+      }
+    } catch (e) {
+      console.log("Failed to parse JSON from cleaned message text:", e.message);
     }
 
     console.warn("No valid pricing analysis JSON found in the last assistant message.");

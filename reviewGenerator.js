@@ -96,6 +96,22 @@ return only the json and nothing else`;
 
       // Monitor ChatGPT's response
       let debounceTimer;
+      let timeoutTimer;
+      
+      // Timeout: stop spinner and show warning if no valid JSON after 15 seconds
+      timeoutTimer = setTimeout(() => {
+        // Remove spinner and re-enable button
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+          Generate Reviews
+        `;
+        // Show warning notification
+        showNotification('No valid review generation response received from ChatGPT after 15 seconds. Please try again or rephrase your prompt.', 'warning');
+      }, 15000);
+
       reviewObserver = new MutationObserver((mutations) => {
         console.log('Review Generation MutationObserver triggered, mutations:', mutations.length);
         
@@ -130,6 +146,8 @@ return only the json and nothing else`;
           });
           
           if (parsed) {
+            // If valid JSON is found, clear the timeout
+            clearTimeout(timeoutTimer);
             console.log('Found valid review generation results JSON:', parsed);
             
             // Check if this result is from our current request by checking the timestamp
@@ -594,8 +612,8 @@ return only the json and nothing else`;
     const lastMessage = messages[messages.length - 1];
     console.log("Checking last assistant message for review generation JSON");
 
+    // Method 1: Try to extract JSON from code blocks first
     const codeBlocks = lastMessage.querySelectorAll('pre code');
-
     console.log("Found", codeBlocks.length, "code blocks in last message");
 
     for (const code of codeBlocks) {
@@ -608,15 +626,15 @@ return only the json and nothing else`;
         const match = text.match(/\[[\s\S]*\]/);
         if (match) {
           const json = JSON.parse(match[0]);
-          console.log("Extracted JSON from last message:", json);
+          console.log("Extracted JSON from code block for review generation:", json);
           
           // If a validator function is provided, use it to check the JSON structure
           if (validator && typeof validator === 'function') {
             if (validator(json)) {
-              console.log("JSON passed validator for review generation");
+              console.log("JSON from code block passed validator for review generation");
               return json;
             } else {
-              console.log("JSON failed validator for review generation");
+              console.log("JSON from code block failed validator for review generation");
             }
           } else {
             return json; // Return any valid JSON if no validator
@@ -624,9 +642,105 @@ return only the json and nothing else`;
         }
       } catch (e) {
         // Not valid JSON, continue
-        console.log("Failed to parse JSON from code block:", e.message);
+        console.log("Failed to parse JSON from code block for review generation:", e.message);
         continue;
       }
+    }
+
+    // Method 2: Try to extract JSON from HTML-formatted content
+    try {
+        const messageHTML = lastMessage.innerHTML;
+        console.log("Attempting to extract JSON from HTML-formatted content for review generation");
+        
+        // Find JSON within HTML content (look for array format for reviews)
+        const jsonMatch = messageHTML.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+            let jsonString = jsonMatch[0];
+            
+            // Clean HTML entities and tags
+            jsonString = jsonString
+                .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+                .replace(/<br\s*\/?>/gi, '\n') // Replace <br> tags with newlines
+                .replace(/<[^>]*>/g, '') // Remove all HTML tags
+                .replace(/&amp;/g, '&') // Replace &amp; with &
+                .replace(/&lt;/g, '<') // Replace &lt; with <
+                .replace(/&gt;/g, '>') // Replace &gt; with >
+                .replace(/&quot;/g, '"') // Replace &quot; with "
+                .replace(/&#39;/g, "'") // Replace &#39; with '
+                .trim();
+            
+            const json = JSON.parse(jsonString);
+            console.log("Extracted JSON from HTML-formatted content for review generation:", json);
+            
+            // If a validator function is provided, use it to check the JSON structure
+            if (validator && typeof validator === 'function') {
+                if (validator(json)) {
+                    console.log("JSON from HTML-formatted content passed validator for review generation");
+                    return json;
+                } else {
+                    console.log("JSON from HTML-formatted content failed validator for review generation");
+                }
+            } else {
+                return json; // Return any valid JSON if no validator
+            }
+        }
+    } catch (e) {
+        console.log("Failed to parse JSON from HTML-formatted content for review generation:", e.message);
+    }
+
+    // Method 3: Try to extract JSON from the entire message text (for raw JSON responses)
+    try {
+        const messageText = lastMessage.textContent.trim();
+        console.log("Attempting to parse entire message text for review generation");
+        
+        // Try to find JSON array in the message
+        const jsonMatch = messageText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+            const jsonText = jsonMatch[1];
+            const json = JSON.parse(jsonText);
+            console.log("Successfully parsed JSON from message text for review generation:", json);
+
+            if (validator && typeof validator === 'function') {
+                if (validator(json)) {
+                    console.log("JSON from message text passed validator for review generation");
+                    return json;
+                }
+            } else {
+                return json;
+            }
+        }
+    } catch (e) {
+        console.log("Failed to parse JSON from message text for review generation:", e.message);
+    }
+
+    // Method 4: Try to clean up and parse the entire message as JSON
+    try {
+        const messageText = lastMessage.textContent || lastMessage.innerText;
+        const cleanedText = messageText.trim();
+        
+        // Remove common prefixes/suffixes that might be added by ChatGPT
+        const jsonStart = cleanedText.indexOf('[');
+        const jsonEnd = cleanedText.lastIndexOf(']');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            const jsonString = cleanedText.substring(jsonStart, jsonEnd + 1);
+            const json = JSON.parse(jsonString);
+            console.log("Extracted JSON from cleaned message text for review generation:", json);
+            
+            // If a validator function is provided, use it to check the JSON structure
+            if (validator && typeof validator === 'function') {
+                if (validator(json)) {
+                    console.log("JSON from cleaned message text passed validator for review generation");
+                    return json;
+                } else {
+                    console.log("JSON from cleaned message text failed validator for review generation");
+                }
+            } else {
+                return json; // Return any valid JSON if no validator
+            }
+        }
+    } catch (e) {
+        console.log("Failed to parse JSON from cleaned message text for review generation:", e.message);
     }
 
     console.warn("No valid review generation JSON found in the last assistant message.");

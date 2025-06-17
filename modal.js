@@ -14,17 +14,26 @@ function createAuditModal() {
       <div class="audit-modal-content">
         <span class="close">&times;</span>
         <div class="tabs">
-          <button class="tab-btn active" data-tab="title">Title</button>
+          <button class="tab-btn active" data-tab="analysis">Global Analysis</button>
+          <button class="tab-btn" data-tab="title">Title</button>
           <button class="tab-btn" data-tab="short-desc">Short Description</button>
           <button class="tab-btn" data-tab="description">Description</button>
           <button class="tab-btn" data-tab="specifications">Specifications</button>
           <button class="tab-btn" data-tab="categories">Categories</button>
           <button class="tab-btn" data-tab="tags">Tags</button>
           <button class="tab-btn" data-tab="reviews">Reviews</button>
-          <button class="tab-btn" data-tab="analysis">Global Analysis</button>
         </div>
         <div class="tab-content">
-          <div id="tab-title" class="tab-pane active">
+          <div id="tab-analysis" class="tab-pane active">
+            <h3>Global Analysis</h3>
+            <div class="global-score"></div>
+            <div class="overall-analysis"></div>
+            <div class="improvements">
+              <h4>Priority Improvements</h4>
+              <ul class="improvements-list"></ul>
+            </div>
+          </div>
+          <div id="tab-title" class="tab-pane">
             <h3>Title Analysis</h3>
             <div class="comparison">
               <div class="original">
@@ -127,15 +136,6 @@ function createAuditModal() {
                 <div class="score"></div>
                 <div class="analysis"></div>
               </div>
-            </div>
-          </div>
-          <div id="tab-analysis" class="tab-pane">
-            <h3>Global Analysis</h3>
-            <div class="global-score"></div>
-            <div class="overall-analysis"></div>
-            <div class="improvements">
-              <h4>Priority Improvements</h4>
-              <ul class="improvements-list"></ul>
             </div>
           </div>
         </div>

@@ -486,21 +486,6 @@ Please ensure the response is valid JSON and includes all required fields.
         trendingList.innerHTML = analysisResults.trendingComparisons.map((trendingProduct, index) => {
             console.log('Processing trending product', index + 1, ':', trendingProduct.title);
             
-            // Handle gallery images
-            let galleryHTML = '';
-            if (trendingProduct.galleryImages && Array.isArray(trendingProduct.galleryImages) && trendingProduct.galleryImages.length > 0) {
-                galleryHTML = `
-                    <div class="product-gallery">
-                        <h5>Gallery Images:</h5>
-                        <div class="gallery-grid">
-                            ${trendingProduct.galleryImages.map(img => `
-                                <img src="${img}" alt="Product image" class="gallery-image" onerror="this.style.display='none'">
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
             // Handle description
             let descriptionHTML = '';
             if (trendingProduct.description) {
@@ -533,7 +518,6 @@ Please ensure the response is valid JSON and includes all required fields.
                         <p><strong>Platform:</strong> ${trendingProduct.platform || 'N/A'}</p>
                         <p><strong>Rating:</strong> ${trendingProduct.rating ? trendingProduct.rating + '/5' : 'N/A'} ${trendingProduct.reviews ? '(' + trendingProduct.reviews + ' reviews)' : ''}</p>
                     </div>
-                    ${galleryHTML}
                     ${descriptionHTML}
                     ${specificationsHTML}
                     <p><strong>URL:</strong> <a href="${trendingProduct.productUrl || '#'}" target="_blank" rel="noopener noreferrer">View Product</a></p>

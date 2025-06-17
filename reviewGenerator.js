@@ -165,7 +165,7 @@ return only the json and nothing else`;
                 timestamp: Date.now(),
                 requestId: requestId
               };
-              localStorage.setItem(`reviews_${product.id}`, JSON.stringify(reviewData));
+              // localStorage.setItem(`reviews_${product.id}`, JSON.stringify(reviewData));
 
               // Automatically show the review generation modal
               try {

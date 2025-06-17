@@ -248,7 +248,7 @@ return only the json and nothing else`;
                                  parsed.currentProduct?.id === String(productId) ? 'currentProduct.id' :
                                  Math.abs((parsed.currentProduct?.price || 0) - productPrice) < 0.01 ? 'price' : 'fallback'
               };
-              localStorage.setItem(`pricing_${product.id}`, JSON.stringify(pricingData));
+              // localStorage.setItem(`pricing_${product.id}`, JSON.stringify(pricingData));
 
               // Automatically show the pricing analysis modal
               try {

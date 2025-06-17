@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AsmineGpt - ChatGPT Audit for WooCommerce ",
+  "name": "AYYYA - AI Integration for WooCommerce % Chatgpt ",
   "version": "1.0",
   "action": {
     "default_title": "Open WooCommerce Audit"
@@ -10,10 +10,7 @@
     "48": "icons/icon16.png",
     "128": "icons/icon16.png"
   },
-  "permissions": [
-    "storage",
-    "clipboardWrite"
-  ],
+  "permissions": [  ],
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://asmine-production.up.railway.app/*"

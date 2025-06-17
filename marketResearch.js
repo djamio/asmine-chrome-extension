@@ -226,7 +226,7 @@ Please ensure the response is valid JSON and includes all required fields.
                 timestamp: Date.now(),
                 requestId: requestId
               };
-              localStorage.setItem(`research_${product.id}`, JSON.stringify(researchData));
+              // localStorage.setItem(`research_${product.id}`, JSON.stringify(researchData));
 
               // Automatically show the market research modal
               try {

@@ -1080,7 +1080,7 @@ Please ensure the response is valid JSON and includes all required fields.
                 product: product,
                 timestamp: Date.now()
               };
-              localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
+              // localStorage.setItem(`audit_${product.id}`, JSON.stringify(auditData));
 
               // Automatically show the audit modal
               try {
@@ -2376,15 +2376,18 @@ Please ensure the response is valid JSON and includes all required fields.
   }
 
   // Simple click handler for connect store now button
-  document.getElementById('connectNowBtn').onclick = function() {
-    // Hide audit tab
-    document.getElementById('tab-audit').style.display = 'none';
-    // Show connect tab
-    document.getElementById('tab-connect').style.display = 'block';
-    // Update active states
-    document.querySelector('[data-tab="audit"]').classList.remove('active');
-    document.querySelector('[data-tab="connect"]').classList.add('active');
-  };
+  const connectNowBtn = document.getElementById('connectNowBtn');
+  if (connectNowBtn) {
+    connectNowBtn.onclick = function() {
+      // Hide audit tab
+      document.getElementById('tab-audit').style.display = 'none';
+      // Show connect tab
+      document.getElementById('tab-connect').style.display = 'block';
+      // Update active states
+      document.querySelector('[data-tab="audit"]').classList.remove('active');
+      document.querySelector('[data-tab="connect"]').classList.add('active');
+    };
+  }
 
   // Add event listener for auth status changes
   document.addEventListener('wooAuthChanged', (event) => {
@@ -3253,8 +3256,8 @@ Please analyze all aspects and return a JSON response with the following structu
             `${item.original} → ${item.enhanced}`
           ).join('\n');
           
-          await navigator.clipboard.writeText(changesText);
-          alert('Changes copied to clipboard! You can paste them into your WooCommerce admin panel.');
+        //   await navigator.clipboard.writeText(changesText);
+        //   alert('Changes copied to clipboard! You can paste them into your WooCommerce admin panel.');
         }
         
         return { success: true, message: 'Changes previewed (WooCommerce not connected)' };
@@ -3338,8 +3341,8 @@ Please analyze all aspects and return a JSON response with the following structu
       }
 
       // Store both descriptions and IDs for comparison
-      localStorage.setItem('bulkOriginalDescriptions', JSON.stringify(productShortDescriptions));
-      localStorage.setItem('bulkProductIds', JSON.stringify(productIds));
+      // localStorage.setItem('bulkOriginalDescriptions', JSON.stringify(productShortDescriptions));
+      // localStorage.setItem('bulkProductIds', JSON.stringify(productIds));
 
       // Create the prompt using your provided structure
       const prompt = `Please analyze and enhance the following product short descriptions for an e-commerce store. For each short description, provide:
@@ -3740,11 +3743,11 @@ ${productShortDescriptions.map((shortDescription, index) => `${index + 1}. ${sho
         `Product ID: ${update.id}\nNew Description: ${update.short_description}\n---`
       ).join('\n');
       
-      navigator.clipboard.writeText(updatesText).then(() => {
-        showNotification('warning', 'Updates Copied', `${updates.length} descriptions have been copied to clipboard for manual update.`);
-      }).catch(() => {
-        showNotification('error', 'Error', `Failed to apply changes. Please copy the updates manually.`);
-      });
+      // navigator.clipboard.writeText(updatesText).then(() => {
+      //   showNotification('warning', 'Updates Copied', `${updates.length} descriptions have been copied to clipboard for manual update.`);
+      // }).catch(() => {
+      //   showNotification('error', 'Error', `Failed to apply changes. Please copy the updates manually.`);
+      // });
     } finally {
       // Hide loading overlay
       if (loadingOverlay) {

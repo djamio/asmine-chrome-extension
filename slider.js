@@ -1334,6 +1334,10 @@ Please ensure the response is valid JSON and includes all required fields.
             <div class="content-box">
               <div class="original-content">${original}</div>
             </div>
+            <div class="analysis-section">
+              <h4>Analysis</h4>
+              <p>${analysis || 'No analysis available'}</p>
+            </div>
           </div>
           <div class="version-block suggested">
             <h4>Enhanced Version</h4>
@@ -1342,10 +1346,6 @@ Please ensure the response is valid JSON and includes all required fields.
             </div>
             <button class="apply-changes-btn" data-field="${field}">Apply Changes</button>
           </div>
-        </div>
-        <div class="analysis-section">
-          <h4>Analysis</h4>
-          <p>${analysis || 'No analysis available'}</p>
         </div>
       `;
     }
